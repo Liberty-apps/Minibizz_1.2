@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Styles pour les appareils mobiles avec notch */
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* Styles spécifiques pour les appareils mobiles */
+@media (max-width: 768px) {
+  .max-w-7xl {
+    max-width: 100%;
+  }
+}
+
+/* Styles pour éviter le zoom sur les inputs sur iOS */
+input, select, textarea {
+  font-size: 16px;
+}

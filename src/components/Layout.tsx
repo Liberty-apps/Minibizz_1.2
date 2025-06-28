@@ -11,9 +11,10 @@ import {
   HelpCircle,
   Scale,
   Newspaper,
-  Handshake
+  Handshake,
+  ArrowLeft
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FloatingMissionButton from './FloatingMissionButton';
 import FloatingMenuButton from './FloatingMenuButton';
 
@@ -21,6 +22,16 @@ const Layout: React.FC = () => {
   const { logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -29,6 +40,10 @@ const Layout: React.FC = () => {
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
     }
+  };
+
+  const handleBack = () => {
+    navigate(-1);
   };
 
   const navigation = [
@@ -50,13 +65,21 @@ const Layout: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header simplifié - juste le logo */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-              <FileText className="w-6 h-6 text-white" />
+      <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          {isMobile && location.pathname !== '/' && (
+            <button 
+              onClick={handleBack}
+              className="p-1 rounded-full hover:bg-gray-100"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+          )}
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center">
+              <FileText className="w-5 h-5 text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">MiniBizz</span>
+            <span className="text-xl font-bold text-gray-900">MiniBizz</span>
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FileText, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
@@ -9,8 +9,14 @@ const Register: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isNative, setIsNative] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Vérifier si on est dans un environnement Capacitor
+    setIsNative(!!(window as any).Capacitor);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,14 +153,16 @@ const Register: React.FC = () => {
             </button>
           </div>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Déjà un compte ?{' '}
-              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
-                Se connecter
-              </Link>
-            </p>
-          </div>
+          {!isNative && (
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                Déjà un compte ?{' '}
+                <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
+                  Se connecter
+                </Link>
+              </p>
+            </div>
+          )}
         </form>
       </div>
     </div>

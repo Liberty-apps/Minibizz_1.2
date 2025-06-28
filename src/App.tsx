@@ -14,8 +14,35 @@ import ActualitesEmplois from './pages/ActualitesEmplois';
 import Aide from './pages/Aide';
 import Legal from './pages/Legal';
 import Parametres from './pages/Parametres';
+import { useEffect } from 'react';
+import { App as CapApp } from '@capacitor/app';
 
 function App() {
+  useEffect(() => {
+    // Gestion du bouton retour sur Android
+    const handleBackButton = () => {
+      CapApp.addListener('backButton', ({ canGoBack }) => {
+        if (canGoBack) {
+          window.history.back();
+        } else {
+          // Demander confirmation avant de quitter l'app
+          if (confirm('Voulez-vous quitter l\'application ?')) {
+            CapApp.exitApp();
+          }
+        }
+      });
+      
+      return () => {
+        CapApp.removeAllListeners();
+      };
+    };
+
+    // Vérifier si on est dans un environnement Capacitor
+    if ((window as any).Capacitor) {
+      handleBackButton();
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <Router>
