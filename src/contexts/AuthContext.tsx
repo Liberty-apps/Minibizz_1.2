@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { onboardingService } from '../services/onboarding';
 import type { User } from '@supabase/supabase-js';
 
 interface AuthUser extends User {
   profile?: {
     nom?: string;
     prenom?: string;
+    activite_principale?: string;
+    onboarding_completed?: boolean;
   };
   name?: string;
 }
@@ -17,6 +20,7 @@ interface AuthContextType {
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updateProfile: () => Promise<void>;
   loading: boolean;
 }
 
@@ -55,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('nom, prenom')
+        .select('nom, prenom, activite_principale, onboarding_completed')
         .eq('id', authUser.id)
         .single();
 
@@ -70,6 +74,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       setUser(userWithProfile);
+
+      // Vérifier si l'onboarding est nécessaire
+      if (profile && !profile.onboarding_completed) {
+        const needsOnboarding = await onboardingService.needsOnboarding(authUser.id);
+        if (needsOnboarding) {
+          router.replace('/(auth)/onboarding');
+        }
+      }
     } catch (error) {
       console.error('Erreur lors du chargement du profil:', error);
       // Créer un utilisateur de base même en cas d'erreur
@@ -79,6 +91,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(basicUser);
     }
+  };
+
+  const updateProfile = async () => {
+    if (!user) return;
+    await loadUserProfile(user);
   };
 
   const login = async (email: string, password: string) => {
@@ -148,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .insert({
               id: data.user.id,
               email: data.user.email!,
+              onboarding_completed: false
             });
 
           if (profileError && profileError.code !== '23505') { // Ignore duplicate key error
@@ -205,7 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, resetPassword, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, resetPassword, updateProfile, loading }}>
       {children}
     </AuthContext.Provider>
   );
