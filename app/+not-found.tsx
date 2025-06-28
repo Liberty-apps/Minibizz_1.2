@@ -1,6 +1,6 @@
 import { Link, Stack } from 'expo-router';
-import { StyleSheet, View, Text } from 'react-native';
-import { Chrome as Home } from 'lucide-react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { Chrome as Home, ArrowLeft } from 'lucide-react-native';
 
 export default function NotFoundScreen() {
   return (
@@ -12,9 +12,30 @@ export default function NotFoundScreen() {
         <Text style={styles.subtitle}>
           La page que vous recherchez est introuvable.
         </Text>
-        <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>Retourner à l'accueil</Text>
-        </Link>
+        
+        <View style={styles.actions}>
+          <Link href="/" asChild>
+            <TouchableOpacity style={styles.primaryButton}>
+              <Home size={20} color="#ffffff" />
+              <Text style={styles.primaryButtonText}>Retourner à l'accueil</Text>
+            </TouchableOpacity>
+          </Link>
+          
+          <TouchableOpacity 
+            style={styles.secondaryButton}
+            onPress={() => window.history.back()}
+          >
+            <ArrowLeft size={20} color="#6b7280" />
+            <Text style={styles.secondaryButtonText}>Retour</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.helpContainer}>
+          <Text style={styles.helpText}>
+            Besoin d'aide ? Contactez notre support à{' '}
+            <Text style={styles.helpLink}>support@minibizz.fr</Text>
+          </Text>
+        </View>
       </View>
     </>
   );
@@ -39,17 +60,51 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
   },
-  link: {
+  actions: {
+    width: '100%',
+    maxWidth: 300,
+    gap: 12,
+  },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#2563eb',
-    paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
+    gap: 8,
   },
-  linkText: {
+  primaryButtonText: {
     fontSize: 16,
     fontWeight: '500',
     color: '#ffffff',
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  secondaryButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  helpContainer: {
+    marginTop: 32,
+  },
+  helpText: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  helpLink: {
+    color: '#2563eb',
+    fontWeight: '500',
   },
 });
