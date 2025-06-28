@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { FileText, Mail, Lock, AlertCircle } from 'lucide-react-native';
+import { FileText, Mail, Lock, CircleAlert as AlertCircle } from 'lucide-react-native';
 
 export default function Login() {
   const [email, setEmail] = useState('');
