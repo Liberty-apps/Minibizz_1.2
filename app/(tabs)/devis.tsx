@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { router } from 'expo-router';
-import { FileText, Plus, Search, Filter, Eye, Edit3, Download, Send, Calendar, Euro } from 'lucide-react-native';
+import { FileText, Plus, Search, Filter, Eye, CreditCard as Edit3, Download, Send, Calendar, Euro } from 'lucide-react-native';
 
 export default function Devis() {
   const [activeTab, setActiveTab] = useState<'devis' | 'factures'>('devis');
