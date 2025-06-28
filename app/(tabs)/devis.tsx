@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { FileText, Plus, Search, Filter, Eye, Edit3, Download, Send, Calendar, Euro, Clock, CheckCircle, AlertCircle } from 'lucide-react-native';
+import { FileText, Plus, Search, Filter, Eye, CreditCard as Edit3, Download, Send, Calendar, Euro, Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { devisService, facturesService } from '../../src/services/database';
 
