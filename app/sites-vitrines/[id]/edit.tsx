@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ChevronLeft, Save, Trash2, Globe, Palette, Layout, Settings, Layers } from 'lucide-react-native';
+import { ChevronLeft, Save, Trash2, Globe, Palette, LayoutGrid as Layout, Settings, Layers } from 'lucide-react-native';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { sitesService } from '../../../src/services/sites';
 
