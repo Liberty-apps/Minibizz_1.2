@@ -12,9 +12,11 @@ import {
   Globe,
   Palette,
   ArrowRight,
-  Info
+  Info,
+  Sparkles
 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useSubscription } from '../../src/contexts/SubscriptionContext';
 import { subscriptionService } from '../../src/services/subscription';
 
 interface Plan {
@@ -29,38 +31,24 @@ interface Plan {
   ordre: number;
 }
 
-interface Abonnement {
-  id: string;
-  plan_id: string;
-  statut: string;
-  type_facturation: string;
-  date_fin: string;
-  plan: Plan;
-}
-
 export default function Abonnement() {
   const { user } = useAuth();
+  const { subscription, plan: currentPlan, refreshSubscription } = useSubscription();
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [currentSubscription, setCurrentSubscription] = useState<Abonnement | null>(null);
   const [billingType, setBillingType] = useState<'mensuel' | 'annuel'>('mensuel');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
-  }, [user]);
+    loadPlans();
+  }, []);
 
-  const loadData = async () => {
+  const loadPlans = async () => {
     try {
-      const [plansData, subscriptionData] = await Promise.all([
-        subscriptionService.getPlans(),
-        user ? subscriptionService.getCurrentSubscription(user.id) : null
-      ]);
-      
+      const plansData = await subscriptionService.getPlans();
       setPlans(plansData);
-      setCurrentSubscription(subscriptionData);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
-      Alert.alert('Erreur', 'Impossible de charger les informations d\'abonnement');
+      Alert.alert('Erreur', 'Impossible de charger les plans d\'abonnement');
     } finally {
       setLoading(false);
     }
@@ -90,7 +78,7 @@ export default function Abonnement() {
               setLoading(true);
               await subscriptionService.subscribe(user.id, planId, billingType);
               Alert.alert('Succès', 'Abonnement souscrit avec succès !');
-              loadData();
+              await refreshSubscription();
             } catch (error) {
               console.error('Erreur souscription:', error);
               Alert.alert('Erreur', 'Impossible de souscrire à ce plan. Veuillez réessayer.');
@@ -104,7 +92,7 @@ export default function Abonnement() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!user || !currentSubscription) return;
+    if (!user || !subscription) return;
 
     Alert.alert(
       'Annuler l\'abonnement',
@@ -119,7 +107,7 @@ export default function Abonnement() {
               setLoading(true);
               await subscriptionService.cancelSubscription(user.id);
               Alert.alert('Succès', 'Abonnement annulé avec succès');
-              loadData();
+              await refreshSubscription();
             } catch (error) {
               Alert.alert('Erreur', 'Impossible d\'annuler l\'abonnement');
             } finally {
@@ -132,17 +120,17 @@ export default function Abonnement() {
   };
 
   const getPlanIcon = (planName: string) => {
-    switch (planName) {
-      case 'Freemium': return Star;
-      case 'Premium Standard': return Zap;
-      case 'Premium + Pack Pro+': return Shield;
-      case 'Premium + Site Vitrine': return Globe;
+    switch (planName.toLowerCase()) {
+      case 'freemium': return Star;
+      case 'premium standard': return Zap;
+      case 'premium + pack pro+': return Shield;
+      case 'premium + site vitrine': return Globe;
       default: return Crown;
     }
   };
 
   const formatPrice = (price: number) => {
-    return price === 0 ? 'Gratuit' : `${price.toFixed(2)}€`;
+    return price === 0 ? 'Gratuit' : `${price.toFixed(0)}€`;
   };
 
   const getEconomies = (mensuel: number, annuel: number) => {
@@ -172,25 +160,29 @@ export default function Abonnement() {
       </View>
 
       {/* Current Subscription */}
-      {currentSubscription && (
+      {subscription && (
         <View style={styles.currentSubscription}>
           <Text style={styles.currentTitle}>Votre abonnement actuel</Text>
           <View style={styles.currentCard}>
             <View style={styles.currentInfo}>
-              <Text style={styles.currentPlan}>{currentSubscription.plan.nom}</Text>
-              <Text style={[
-                styles.currentStatus,
-                { color: currentSubscription.statut === 'actif' ? '#16a34a' : '#dc2626' }
-              ]}>
-                Statut: {currentSubscription.statut}
-              </Text>
+              <View style={styles.currentHeader}>
+                <Text style={styles.currentPlan}>{subscription.plan.nom}</Text>
+                <View style={[
+                  styles.statusBadge,
+                  { backgroundColor: subscription.statut === 'actif' ? '#16a34a' : '#dc2626' }
+                ]}>
+                  <Text style={styles.statusText}>
+                    {subscription.statut === 'actif' ? 'Actif' : subscription.statut}
+                  </Text>
+                </View>
+              </View>
               <Text style={styles.currentBilling}>
-                Facturation: {currentSubscription.type_facturation}
+                Facturation: {subscription.type_facturation}
               </Text>
-              {currentSubscription.date_fin && (
+              {subscription.date_fin && (
                 <Text style={styles.currentExpiry}>
-                  {currentSubscription.statut === 'actif' ? 'Renouvellement' : 'Expire'} le: {' '}
-                  {new Date(currentSubscription.date_fin).toLocaleDateString('fr-FR')}
+                  {subscription.statut === 'actif' ? 'Renouvellement' : 'Expire'} le: {' '}
+                  {new Date(subscription.date_fin).toLocaleDateString('fr-FR')}
                 </Text>
               )}
             </View>
@@ -199,7 +191,7 @@ export default function Abonnement() {
                 <CreditCard size={20} color="#2563eb" />
                 <Text style={styles.manageText}>Gérer</Text>
               </TouchableOpacity>
-              {currentSubscription.statut === 'actif' && currentSubscription.plan.nom !== 'Freemium' && (
+              {subscription.statut === 'actif' && subscription.plan.nom !== 'Freemium' && (
                 <TouchableOpacity 
                   style={styles.cancelButton}
                   onPress={handleCancelSubscription}
@@ -243,7 +235,8 @@ export default function Abonnement() {
             Annuel
           </Text>
           <View style={styles.savingsBadge}>
-            <Text style={styles.savingsText}>Économies</Text>
+            <Sparkles size={12} color="#ffffff" />
+            <Text style={styles.savingsText}>-20%</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -252,16 +245,25 @@ export default function Abonnement() {
       <View style={styles.plansContainer}>
         {plans.map((plan) => {
           const IconComponent = getPlanIcon(plan.nom);
-          const isCurrentPlan = currentSubscription?.plan_id === plan.id;
+          const isCurrentPlan = subscription?.plan_id === plan.id;
           const price = billingType === 'mensuel' ? plan.prix_mensuel : plan.prix_annuel;
           const economies = getEconomies(plan.prix_mensuel, plan.prix_annuel);
+          const isPopular = plan.nom.includes('Standard');
           
           return (
             <View key={plan.id} style={[
               styles.planCard,
               isCurrentPlan && styles.currentPlanCard,
+              isPopular && styles.popularPlanCard,
               { borderColor: plan.couleur }
             ]}>
+              {isPopular && (
+                <View style={[styles.popularBadge, { backgroundColor: plan.couleur }]}>
+                  <Star size={14} color="#ffffff" />
+                  <Text style={styles.popularText}>Populaire</Text>
+                </View>
+              )}
+
               {/* Plan Header */}
               <View style={styles.planHeader}>
                 <View style={[styles.planIcon, { backgroundColor: plan.couleur }]}>
@@ -292,6 +294,18 @@ export default function Abonnement() {
                     <Text style={styles.featureText}>{value}</Text>
                   </View>
                 ))}
+                
+                {/* Limits */}
+                {plan.limites && Object.keys(plan.limites).length > 0 && (
+                  <View style={styles.limitsContainer}>
+                    <Text style={styles.limitsTitle}>Limites :</Text>
+                    {Object.entries(plan.limites).map(([key, value]) => (
+                      <Text key={key} style={styles.limitText}>
+                        • {key}: {value === 999 ? 'Illimité' : value}
+                      </Text>
+                    ))}
+                  </View>
+                )}
               </View>
 
               {/* Action Button */}
@@ -340,8 +354,8 @@ export default function Abonnement() {
         <View style={styles.faqItem}>
           <Text style={styles.faqQuestion}>Les paiements sont-ils sécurisés ?</Text>
           <Text style={styles.faqAnswer}>
-            Oui, tous les paiements sont traités de manière sécurisée via Stripe, 
-            leader mondial du paiement en ligne.
+            Oui, tous les paiements sont traités de manière sécurisée. 
+            Vos données de paiement sont protégées selon les standards de l'industrie.
           </Text>
         </View>
       </View>
@@ -413,24 +427,35 @@ const styles = StyleSheet.create({
   currentInfo: {
     marginBottom: 12,
   },
+  currentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   currentPlan: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
   },
-  currentStatus: {
-    fontSize: 14,
-    marginTop: 2,
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#ffffff',
   },
   currentBilling: {
     fontSize: 14,
     color: '#6b7280',
-    marginTop: 2,
+    marginBottom: 4,
   },
   currentExpiry: {
     fontSize: 14,
     color: '#6b7280',
-    marginTop: 2,
   },
   currentActions: {
     flexDirection: 'row',
@@ -508,6 +533,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   savingsText: {
     fontSize: 10,
@@ -529,13 +557,37 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    position: 'relative',
   },
   currentPlanCard: {
     borderWidth: 2,
   },
+  popularPlanCard: {
+    borderWidth: 2,
+    transform: [{ scale: 1.02 }],
+  },
+  popularBadge: {
+    position: 'absolute',
+    top: -1,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    gap: 4,
+  },
+  popularText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
   planHeader: {
     alignItems: 'center',
     marginBottom: 20,
+    marginTop: 10,
   },
   planIcon: {
     width: 48,
@@ -550,6 +602,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
     marginBottom: 4,
+    textAlign: 'center',
   },
   planDescription: {
     fontSize: 14,
@@ -593,6 +646,23 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginLeft: 8,
     flex: 1,
+  },
+  limitsContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  limitsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginBottom: 6,
+  },
+  limitText: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginBottom: 2,
   },
   subscribeButton: {
     flexDirection: 'row',

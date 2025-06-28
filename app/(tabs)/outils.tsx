@@ -1,9 +1,30 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { Calculator, Crown, Globe, CircleHelp as HelpCircle, Briefcase, Newspaper, ChevronRight, Zap, Target, Palette } from 'lucide-react-native';
+import { Calculator, Crown, Globe, CircleHelp as HelpCircle, Briefcase, Newspaper, ChevronRight, Zap, Target, Palette, Lock } from 'lucide-react-native';
+import { useSubscription } from '../../src/contexts/SubscriptionContext';
 
 export default function Outils() {
+  const { hasAccess, plan } = useSubscription();
+
+  const handleItemPress = (route: string, feature: string) => {
+    if (!hasAccess(feature)) {
+      Alert.alert(
+        'Fonctionnalité Premium',
+        `Cette fonctionnalité nécessite un abonnement Premium. Votre plan actuel : ${plan?.nom || 'Gratuit'}`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          {
+            text: 'Voir les plans',
+            onPress: () => router.push('/(tabs)/abonnement')
+          }
+        ]
+      );
+      return;
+    }
+    router.push(route as any);
+  };
+
   const outilsCategories = [
     {
       title: 'Calculs & Finances',
@@ -16,6 +37,7 @@ export default function Outils() {
           name: 'Calculateur de charges',
           description: 'Simulez vos charges sociales',
           route: '/(tabs)/calculs',
+          feature: 'calculs',
           icon: Calculator
         }
       ]
@@ -31,6 +53,7 @@ export default function Outils() {
           name: 'Mon abonnement',
           description: 'Plans et facturation',
           route: '/(tabs)/abonnement',
+          feature: 'dashboard', // Toujours accessible
           icon: Crown
         }
       ]
@@ -46,6 +69,7 @@ export default function Outils() {
           name: 'Sites vitrines',
           description: 'Créez votre mini-site',
           route: '/(tabs)/sites-vitrines',
+          feature: 'sites-vitrines',
           icon: Globe
         }
       ]
@@ -61,6 +85,7 @@ export default function Outils() {
           name: 'Missions partagées',
           description: 'Collaborez avec d\'autres auto-entrepreneurs',
           route: '/(tabs)/missions',
+          feature: 'missions',
           icon: Briefcase
         }
       ]
@@ -76,21 +101,19 @@ export default function Outils() {
           name: 'Actualités & Emplois',
           description: 'Restez informé',
           route: '/(tabs)/actualites',
+          feature: 'actualites',
           icon: Newspaper
         },
         {
           name: 'Centre d\'aide',
           description: 'Support et documentation',
           route: '/(tabs)/aide',
+          feature: 'aide',
           icon: HelpCircle
         }
       ]
     }
   ];
-
-  const handleItemPress = (route: string) => {
-    router.push(route as any);
-  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -100,6 +123,12 @@ export default function Outils() {
         <Text style={styles.subtitle}>
           Tous vos outils de gestion en un seul endroit
         </Text>
+        {plan && (
+          <View style={[styles.planBadge, { backgroundColor: plan.couleur || '#2563eb' }]}>
+            <Crown size={16} color="#ffffff" />
+            <Text style={styles.planText}>{plan.nom}</Text>
+          </View>
+        )}
       </View>
 
       {/* Categories */}
@@ -122,23 +151,54 @@ export default function Outils() {
               <View style={styles.categoryItems}>
                 {category.items.map((item, itemIndex) => {
                   const ItemIcon = item.icon;
+                  const hasFeatureAccess = hasAccess(item.feature);
                   
                   return (
                     <TouchableOpacity
                       key={itemIndex}
-                      style={styles.toolItem}
-                      onPress={() => handleItemPress(item.route)}
+                      style={[
+                        styles.toolItem,
+                        !hasFeatureAccess && styles.toolItemDisabled
+                      ]}
+                      onPress={() => handleItemPress(item.route, item.feature)}
                     >
                       <View style={styles.toolItemContent}>
-                        <View style={[styles.toolIcon, { backgroundColor: category.bgColor }]}>
-                          <ItemIcon size={20} color={category.color} />
+                        <View style={[
+                          styles.toolIcon, 
+                          { backgroundColor: hasFeatureAccess ? category.bgColor : '#f3f4f6' }
+                        ]}>
+                          <ItemIcon 
+                            size={20} 
+                            color={hasFeatureAccess ? category.color : '#9ca3af'} 
+                          />
                         </View>
                         <View style={styles.toolInfo}>
-                          <Text style={styles.toolName}>{item.name}</Text>
-                          <Text style={styles.toolDescription}>{item.description}</Text>
+                          <View style={styles.toolNameRow}>
+                            <Text style={[
+                              styles.toolName,
+                              !hasFeatureAccess && styles.toolNameDisabled
+                            ]}>
+                              {item.name}
+                            </Text>
+                            {!hasFeatureAccess && (
+                              <Lock size={14} color="#9ca3af" />
+                            )}
+                          </View>
+                          <Text style={[
+                            styles.toolDescription,
+                            !hasFeatureAccess && styles.toolDescriptionDisabled
+                          ]}>
+                            {item.description}
+                          </Text>
+                          {!hasFeatureAccess && (
+                            <Text style={styles.premiumLabel}>Premium requis</Text>
+                          )}
                         </View>
                       </View>
-                      <ChevronRight size={20} color="#9ca3af" />
+                      <ChevronRight 
+                        size={20} 
+                        color={hasFeatureAccess ? "#9ca3af" : "#d1d5db"} 
+                      />
                     </TouchableOpacity>
                   );
                 })}
@@ -161,11 +221,22 @@ export default function Outils() {
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.quickActionCard}
-            onPress={() => router.push('/(tabs)/sites-vitrines')}
+            style={[
+              styles.quickActionCard,
+              !hasAccess('sites-vitrines') && styles.quickActionDisabled
+            ]}
+            onPress={() => handleItemPress('/(tabs)/sites-vitrines', 'sites-vitrines')}
           >
-            <Target size={24} color="#059669" />
-            <Text style={styles.quickActionText}>Créer un site</Text>
+            <Target size={24} color={hasAccess('sites-vitrines') ? "#059669" : "#9ca3af"} />
+            <Text style={[
+              styles.quickActionText,
+              !hasAccess('sites-vitrines') && styles.quickActionTextDisabled
+            ]}>
+              Créer un site
+            </Text>
+            {!hasAccess('sites-vitrines') && (
+              <Lock size={12} color="#9ca3af" style={styles.quickActionLock} />
+            )}
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -192,6 +263,25 @@ export default function Outils() {
           <ChevronRight size={16} color="#2563eb" />
         </TouchableOpacity>
       </View>
+
+      {/* Upgrade Banner */}
+      {(!plan || plan.nom === 'Freemium') && (
+        <View style={styles.upgradeBanner}>
+          <Crown size={24} color="#9333ea" />
+          <View style={styles.upgradeContent}>
+            <Text style={styles.upgradeTitle}>Débloquez toutes les fonctionnalités</Text>
+            <Text style={styles.upgradeText}>
+              Accédez aux sites vitrines, missions partagées et bien plus encore
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.upgradeButton}
+            onPress={() => router.push('/(tabs)/abonnement')}
+          >
+            <Text style={styles.upgradeButtonText}>Upgrader</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -215,6 +305,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     marginTop: 4,
+  },
+  planBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 12,
+  },
+  planText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
   },
   categoriesContainer: {
     padding: 16,
@@ -268,6 +373,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
+  toolItemDisabled: {
+    opacity: 0.6,
+  },
   toolItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -284,14 +392,31 @@ const styles = StyleSheet.create({
   toolInfo: {
     flex: 1,
   },
+  toolNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   toolName: {
     fontSize: 16,
     fontWeight: '500',
     color: '#111827',
   },
+  toolNameDisabled: {
+    color: '#9ca3af',
+  },
   toolDescription: {
     fontSize: 14,
     color: '#6b7280',
+    marginTop: 2,
+  },
+  toolDescriptionDisabled: {
+    color: '#9ca3af',
+  },
+  premiumLabel: {
+    fontSize: 12,
+    color: '#9333ea',
+    fontWeight: '500',
     marginTop: 2,
   },
   quickActionsSection: {
@@ -318,12 +443,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+    position: 'relative',
+  },
+  quickActionDisabled: {
+    opacity: 0.6,
   },
   quickActionText: {
     fontSize: 12,
     color: '#6b7280',
     marginTop: 8,
     textAlign: 'center',
+  },
+  quickActionTextDisabled: {
+    color: '#9ca3af',
+  },
+  quickActionLock: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
   },
   tipsSection: {
     backgroundColor: '#ffffff',
@@ -363,5 +500,40 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#2563eb',
     marginRight: 6,
+  },
+  upgradeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#faf5ff',
+    margin: 16,
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9d5ff',
+  },
+  upgradeContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  upgradeTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#7c3aed',
+    marginBottom: 4,
+  },
+  upgradeText: {
+    fontSize: 14,
+    color: '#8b5cf6',
+  },
+  upgradeButton: {
+    backgroundColor: '#9333ea',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  upgradeButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

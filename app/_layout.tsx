@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '../src/contexts/AuthContext';
+import { SubscriptionProvider } from '../src/contexts/SubscriptionContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();
@@ -27,8 +28,10 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <Slot />
-      <StatusBar style="auto" />
+      <SubscriptionProvider>
+        <Slot />
+        <StatusBar style="auto" />
+      </SubscriptionProvider>
     </AuthProvider>
   );
 }

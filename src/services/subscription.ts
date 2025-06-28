@@ -22,7 +22,8 @@ export const subscriptionService = {
         plan:plans(*)
       `)
       .eq('user_id', userId)
-      .eq('statut', 'actif')
+      .in('statut', ['actif', 'suspendu'])
+      .order('created_at', { ascending: false })
       .limit(1);
 
     if (error) throw error;
@@ -34,7 +35,7 @@ export const subscriptionService = {
     // Vérifier d'abord s'il y a un abonnement existant
     const existingSubscription = await this.getCurrentSubscription(userId);
     
-    if (existingSubscription) {
+    if (existingSubscription && existingSubscription.statut === 'actif') {
       // Mettre à jour l'abonnement existant
       const { data, error } = await supabase
         .from('abonnements')
@@ -94,29 +95,135 @@ export const subscriptionService = {
     return data;
   },
 
-  // Vérifier les limites d'utilisation
-  async checkUsageLimit(userId: string, limitType: string, increment: number = 1) {
-    const { data, error } = await supabase
-      .rpc('check_usage_limit', {
-        p_user_id: userId,
-        p_limit_type: limitType,
-        p_increment: increment
-      });
+  // Vérifier les permissions d'accès
+  async checkAccess(userId: string, feature: string): Promise<boolean> {
+    const subscription = await this.getCurrentSubscription(userId);
+    
+    if (!subscription || subscription.statut !== 'actif') {
+      // Plan gratuit par défaut
+      return this.checkFeatureAccess('freemium', feature);
+    }
 
-    if (error) throw error;
-    return data;
+    return this.checkFeatureAccess(subscription.plan.nom.toLowerCase(), feature);
   },
 
-  // Incrémenter l'utilisation
-  async incrementUsage(userId: string, limitType: string, increment: number = 1) {
-    const { error } = await supabase
-      .rpc('increment_usage', {
-        p_user_id: userId,
-        p_limit_type: limitType,
-        p_increment: increment
-      });
+  // Vérifier l'accès à une fonctionnalité selon le plan
+  checkFeatureAccess(planName: string, feature: string): boolean {
+    const planFeatures = {
+      'freemium': [
+        'dashboard',
+        'clients_basic',
+        'devis_basic',
+        'planning_basic',
+        'calculs'
+      ],
+      'premium standard': [
+        'dashboard',
+        'clients',
+        'devis',
+        'factures',
+        'planning',
+        'calculs',
+        'parametres',
+        'aide'
+      ],
+      'premium + pack pro+': [
+        'dashboard',
+        'clients',
+        'devis',
+        'factures',
+        'planning',
+        'calculs',
+        'parametres',
+        'aide',
+        'missions',
+        'actualites',
+        'analytics'
+      ],
+      'premium + site vitrine': [
+        'dashboard',
+        'clients',
+        'devis',
+        'factures',
+        'planning',
+        'calculs',
+        'parametres',
+        'aide',
+        'sites-vitrines',
+        'domaine-personnalise'
+      ]
+    };
 
-    if (error) throw error;
+    const allowedFeatures = planFeatures[planName] || planFeatures['freemium'];
+    return allowedFeatures.includes(feature);
+  },
+
+  // Récupérer les limites d'utilisation
+  async getUsageLimits(userId: string) {
+    const subscription = await this.getCurrentSubscription(userId);
+    
+    if (!subscription || subscription.statut !== 'actif') {
+      return {
+        clients: 5,
+        devis: 3,
+        factures: 0,
+        sites: 0,
+        stockage: 100 // MB
+      };
+    }
+
+    const limits = subscription.plan.limites || {};
+    return {
+      clients: limits.clients || 999,
+      devis: limits.devis || 999,
+      factures: limits.factures || 999,
+      sites: limits.sites || 0,
+      stockage: limits.stockage || 1000
+    };
+  },
+
+  // Vérifier si une limite est atteinte
+  async checkUsageLimit(userId: string, type: string): Promise<boolean> {
+    const limits = await this.getUsageLimits(userId);
+    
+    let currentUsage = 0;
+    
+    switch (type) {
+      case 'clients':
+        const { count: clientsCount } = await supabase
+          .from('clients')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        currentUsage = clientsCount || 0;
+        return currentUsage < limits.clients;
+        
+      case 'devis':
+        const { count: devisCount } = await supabase
+          .from('devis')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        currentUsage = devisCount || 0;
+        return currentUsage < limits.devis;
+        
+      case 'factures':
+        const { count: facturesCount } = await supabase
+          .from('factures')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        currentUsage = facturesCount || 0;
+        return currentUsage < limits.factures;
+        
+      case 'sites':
+        const { count: sitesCount } = await supabase
+          .from('sites_vitrines')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+        currentUsage = sitesCount || 0;
+        return currentUsage < limits.sites;
+        
+      default:
+        return true;
+    }
   },
 
   // Récupérer l'historique des paiements
@@ -129,27 +236,5 @@ export const subscriptionService = {
 
     if (error) throw error;
     return data || [];
-  },
-
-  // Récupérer les limites d'utilisation actuelles
-  async getCurrentUsage(userId: string) {
-    const currentPeriodStart = new Date();
-    currentPeriodStart.setDate(1);
-    currentPeriodStart.setHours(0, 0, 0, 0);
-
-    const { data, error } = await supabase
-      .from('limites_utilisation')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('periode_debut', currentPeriodStart.toISOString().split('T')[0])
-      .single();
-
-    if (error && error.code !== 'PGRST116') throw error;
-    return data || {
-      documents_crees: 0,
-      clients_exportes: 0,
-      requetes_ia: 0,
-      sites_crees: 0
-    };
   }
 };
