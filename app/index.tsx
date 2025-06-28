@@ -11,7 +11,8 @@ export default function Index() {
       if (user) {
         router.replace('/(tabs)');
       } else {
-        router.replace('/(auth)/login');
+        // Rediriger vers la page de test au lieu de login direct
+        router.replace('/(auth)/test-login');
       }
     }
   }, [user, loading]);
