@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { FileText, Users, Euro, TrendingUp, Calendar, Plus, ArrowRight, Calculator, Crown, Globe, CircleAlert as AlertCircle, Clock, CircleCheck as CheckCircle, BarChart3 } from 'lucide-react-native';
+import { FileText, Users, Euro, TrendingUp, Calendar, Plus, ArrowRight, Calculator, Crown, Globe, CircleAlert as AlertCircle, Clock, CircleCheck as CheckCircle, ChartBar as BarChart3 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { dashboardService } from '../../src/services/database';
 
