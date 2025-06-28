@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Linking } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { FileText, Mail, Lock, CircleAlert as AlertCircle, CircleCheck as CheckCircle, Eye, EyeOff } from 'lucide-react-native';
@@ -12,6 +12,7 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const { register } = useAuth();
 
   const validateForm = () => {
@@ -38,6 +39,10 @@ export default function Register() {
 
     if (password !== confirmPassword) {
       return 'Les mots de passe ne correspondent pas';
+    }
+
+    if (!acceptTerms) {
+      return 'Veuillez accepter les conditions d\'utilisation';
     }
 
     return null;
@@ -86,6 +91,22 @@ export default function Register() {
     }
   };
 
+  const handleTermsPress = () => {
+    if (Platform.OS === 'web') {
+      window.open('https://minibizz.fr/terms', '_blank');
+    } else {
+      Linking.openURL('https://minibizz.fr/terms');
+    }
+  };
+
+  const handlePrivacyPress = () => {
+    if (Platform.OS === 'web') {
+      window.open('https://minibizz.fr/privacy', '_blank');
+    } else {
+      Linking.openURL('https://minibizz.fr/privacy');
+    }
+  };
+
   const passwordStrength = getPasswordStrength();
   const isPasswordMatch = confirmPassword.length > 0 && password === confirmPassword;
 
@@ -126,6 +147,8 @@ export default function Register() {
                 autoCapitalize="none"
                 autoComplete="email"
                 editable={!loading}
+                accessibilityLabel="Adresse email"
+                accessibilityHint="Saisissez votre adresse email"
               />
             </View>
           </View>
@@ -145,10 +168,13 @@ export default function Register() {
                 secureTextEntry={!showPassword}
                 autoComplete="new-password"
                 editable={!loading}
+                accessibilityLabel="Mot de passe"
+                accessibilityHint="Saisissez votre mot de passe"
               />
               <TouchableOpacity 
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
+                accessibilityLabel={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
               >
                 {showPassword ? (
                   <EyeOff size={20} color="#9ca3af" />
@@ -196,10 +222,13 @@ export default function Register() {
                 secureTextEntry={!showConfirmPassword}
                 autoComplete="new-password"
                 editable={!loading}
+                accessibilityLabel="Confirmer le mot de passe"
+                accessibilityHint="Confirmez votre mot de passe"
               />
               <TouchableOpacity 
                 style={styles.eyeButton}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                accessibilityLabel={showConfirmPassword ? "Masquer la confirmation" : "Afficher la confirmation"}
               >
                 {showConfirmPassword ? (
                   <EyeOff size={20} color="#9ca3af" />
@@ -215,10 +244,39 @@ export default function Register() {
             </View>
           </View>
 
+          {/* Terms and Conditions */}
+          <View style={styles.termsContainer}>
+            <TouchableOpacity 
+              style={styles.checkbox}
+              onPress={() => setAcceptTerms(!acceptTerms)}
+              accessibilityLabel="Accepter les conditions"
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: acceptTerms }}
+            >
+              <View style={[styles.checkboxBox, acceptTerms && styles.checkboxChecked]}>
+                {acceptTerms && <CheckCircle size={16} color="#ffffff" />}
+              </View>
+            </TouchableOpacity>
+            <View style={styles.termsText}>
+              <Text style={styles.termsTextContent}>
+                J'accepte les{' '}
+                <Text style={styles.termsLink} onPress={handleTermsPress}>
+                  conditions d'utilisation
+                </Text>
+                {' '}et la{' '}
+                <Text style={styles.termsLink} onPress={handlePrivacyPress}>
+                  politique de confidentialité
+                </Text>
+              </Text>
+            </View>
+          </View>
+
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSubmit}
             disabled={loading}
+            accessibilityLabel="Créer mon compte"
+            accessibilityHint="Appuyez pour créer votre compte"
           >
             <Text style={styles.buttonText}>
               {loading ? 'Création...' : 'Créer mon compte'}
@@ -371,6 +429,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginTop: 4,
+  },
+  termsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    gap: 12,
+  },
+  checkbox: {
+    marginTop: 2,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  checkboxChecked: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  termsText: {
+    flex: 1,
+  },
+  termsTextContent: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+  },
+  termsLink: {
+    color: '#2563eb',
+    fontWeight: '500',
   },
   button: {
     backgroundColor: '#2563eb',

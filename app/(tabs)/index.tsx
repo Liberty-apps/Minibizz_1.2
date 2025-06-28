@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { FileText, Users, Euro, TrendingUp, Calendar, Plus, ArrowRight, Calculator, Crown, Globe, CircleAlert as AlertCircle, Clock, CircleCheck as CheckCircle } from 'lucide-react-native';
+import { FileText, Users, Euro, TrendingUp, Calendar, Plus, ArrowRight, Calculator, Crown, Globe, CircleAlert as AlertCircle, Clock, CircleCheck as CheckCircle, BarChart3 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { dashboardService } from '../../src/services/database';
 
@@ -52,6 +52,11 @@ export default function Dashboard() {
     loadDashboardData();
   };
 
+  const handleRetry = () => {
+    setLoading(true);
+    loadDashboardData();
+  };
+
   const statsCards = [
     {
       name: 'Clients',
@@ -59,7 +64,8 @@ export default function Dashboard() {
       icon: Users,
       color: '#2563eb',
       bgColor: '#eff6ff',
-      route: '/(tabs)/clients'
+      route: '/(tabs)/clients',
+      description: 'Clients enregistrés'
     },
     {
       name: 'Devis',
@@ -67,7 +73,8 @@ export default function Dashboard() {
       icon: FileText,
       color: '#eab308',
       bgColor: '#fefce8',
-      route: '/(tabs)/devis'
+      route: '/(tabs)/devis',
+      description: 'Devis créés'
     },
     {
       name: 'CA Mensuel',
@@ -75,7 +82,8 @@ export default function Dashboard() {
       icon: Euro,
       color: '#16a34a',
       bgColor: '#f0fdf4',
-      route: '/(tabs)/calculs'
+      route: '/(tabs)/calculs',
+      description: 'Chiffre d\'affaires'
     },
     {
       name: 'Croissance',
@@ -83,7 +91,8 @@ export default function Dashboard() {
       icon: TrendingUp,
       color: '#9333ea',
       bgColor: '#faf5ff',
-      route: '/(tabs)/calculs'
+      route: '/(tabs)/calculs',
+      description: 'Par rapport au mois dernier'
     }
   ];
 
@@ -92,37 +101,43 @@ export default function Dashboard() {
       title: 'Nouveau devis', 
       icon: FileText, 
       color: '#2563eb',
-      route: '/(tabs)/devis'
+      route: '/(tabs)/devis',
+      description: 'Créer un devis'
     },
     { 
       title: 'Ajouter client', 
       icon: Users, 
       color: '#16a34a',
-      route: '/(tabs)/clients'
+      route: '/(tabs)/clients',
+      description: 'Nouveau client'
     },
     { 
       title: 'Planifier RDV', 
       icon: Calendar, 
       color: '#eab308',
-      route: '/(tabs)/planning'
+      route: '/(tabs)/planning',
+      description: 'Organiser planning'
     },
     { 
       title: 'Calculer charges', 
       icon: Calculator, 
       color: '#dc2626',
-      route: '/(tabs)/calculs'
+      route: '/(tabs)/calculs',
+      description: 'Simulateur charges'
     },
     { 
       title: 'Mon abonnement', 
       icon: Crown, 
       color: '#9333ea',
-      route: '/(tabs)/abonnement'
+      route: '/(tabs)/abonnement',
+      description: 'Gérer abonnement'
     },
     { 
       title: 'Créer un site', 
       icon: Globe, 
       color: '#059669',
-      route: '/(tabs)/sites-vitrines'
+      route: '/(tabs)/sites-vitrines',
+      description: 'Site vitrine'
     }
   ];
 
@@ -185,7 +200,7 @@ export default function Dashboard() {
         <View style={styles.errorContainer}>
           <AlertCircle size={20} color="#dc2626" />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadDashboardData}>
+          <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
             <Text style={styles.retryText}>Réessayer</Text>
           </TouchableOpacity>
         </View>
@@ -200,11 +215,14 @@ export default function Dashboard() {
               key={index} 
               style={[styles.statCard, { backgroundColor: stat.bgColor }]}
               onPress={() => handleStatPress(stat.route)}
+              accessibilityLabel={`${stat.name}: ${stat.value}`}
+              accessibilityHint={stat.description}
             >
               <View style={styles.statContent}>
-                <View>
+                <View style={styles.statInfo}>
                   <Text style={styles.statLabel}>{stat.name}</Text>
                   <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
+                  <Text style={styles.statDescription}>{stat.description}</Text>
                 </View>
                 <View style={[styles.statIcon, { backgroundColor: stat.color }]}>
                   <Icon size={20} color="#ffffff" />
@@ -226,11 +244,14 @@ export default function Dashboard() {
                 key={index} 
                 style={styles.quickAction}
                 onPress={() => handleActionPress(action.route)}
+                accessibilityLabel={action.title}
+                accessibilityHint={action.description}
               >
                 <View style={[styles.quickActionIcon, { backgroundColor: action.color }]}>
                   <Icon size={24} color="#ffffff" />
                 </View>
                 <Text style={styles.quickActionText}>{action.title}</Text>
+                <Text style={styles.quickActionDescription}>{action.description}</Text>
                 <ArrowRight size={16} color="#9ca3af" />
               </TouchableOpacity>
             );
@@ -247,6 +268,7 @@ export default function Dashboard() {
               key={`devis-${devis.id}`}
               style={styles.activityItem}
               onPress={() => router.push(`/devis/${devis.id}`)}
+              accessibilityLabel={`Devis ${devis.numero}`}
             >
               <View style={styles.activityIcon}>
                 <FileText size={16} color="#2563eb" />
@@ -268,6 +290,7 @@ export default function Dashboard() {
               key={`client-${client.id}`}
               style={styles.activityItem}
               onPress={() => router.push(`/clients/${client.id}`)}
+              accessibilityLabel={`Nouveau client ${client.nom}`}
             >
               <View style={styles.activityIcon}>
                 <Users size={16} color="#16a34a" />
@@ -287,6 +310,7 @@ export default function Dashboard() {
               key={`facture-${facture.id}`}
               style={styles.activityItem}
               onPress={() => router.push(`/factures/${facture.id}`)}
+              accessibilityLabel={`Facture ${facture.numero}`}
             >
               <View style={styles.activityIcon}>
                 <Euro size={16} color="#eab308" />
@@ -309,6 +333,9 @@ export default function Dashboard() {
             <View style={styles.noActivity}>
               <Clock size={32} color="#d1d5db" />
               <Text style={styles.noActivityText}>Aucune activité récente</Text>
+              <Text style={styles.noActivitySubtext}>
+                Commencez par créer un client ou un devis
+              </Text>
             </View>
           )}
         </View>
@@ -320,9 +347,10 @@ export default function Dashboard() {
         <TouchableOpacity 
           style={styles.chartCard}
           onPress={() => router.push('/(tabs)/calculs')}
+          accessibilityLabel="Voir les calculs de revenus"
         >
           <View style={styles.chartPlaceholder}>
-            <TrendingUp size={48} color="#d1d5db" />
+            <BarChart3 size={48} color="#d1d5db" />
             <Text style={styles.chartText}>Graphique des revenus</Text>
             <Text style={styles.chartSubtext}>Évolution mensuelle</Text>
             <View style={styles.chartButton}>
@@ -428,6 +456,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  statInfo: {
+    flex: 1,
+  },
   statLabel: {
     fontSize: 14,
     fontWeight: '500',
@@ -437,6 +468,11 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  statDescription: {
+    fontSize: 12,
+    color: '#9ca3af',
   },
   statIcon: {
     width: 40,
@@ -482,6 +518,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#111827',
+  },
+  quickActionDescription: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginRight: 8,
   },
   activityCard: {
     backgroundColor: '#ffffff',
@@ -534,6 +575,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginTop: 8,
+  },
+  noActivitySubtext: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 4,
+    textAlign: 'center',
   },
   chartCard: {
     backgroundColor: '#ffffff',

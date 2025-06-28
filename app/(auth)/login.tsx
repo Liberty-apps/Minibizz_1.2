@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform, Linking } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { FileText, Mail, Lock, CircleAlert as AlertCircle, Wifi, WifiOff, Eye, EyeOff } from 'lucide-react-native';
@@ -63,6 +63,16 @@ export default function Login() {
     }
   };
 
+  const handleForgotPassword = () => {
+    if (Platform.OS === 'web') {
+      // Sur web, on peut ouvrir une nouvelle page
+      window.open('mailto:support@minibizz.fr?subject=Mot de passe oublié&body=Bonjour, j\'ai oublié mon mot de passe pour le compte : ' + email, '_blank');
+    } else {
+      // Sur mobile, utiliser Linking
+      Linking.openURL('mailto:support@minibizz.fr?subject=Mot de passe oublié&body=Bonjour, j\'ai oublié mon mot de passe pour le compte : ' + email);
+    }
+  };
+
   const getErrorIcon = () => {
     if (error.includes('connexion') || error.includes('serveur')) {
       return <WifiOff color="#ef4444" size={20} />;
@@ -107,6 +117,8 @@ export default function Login() {
                 autoCapitalize="none"
                 autoComplete="email"
                 editable={!loading}
+                accessibilityLabel="Adresse email"
+                accessibilityHint="Saisissez votre adresse email"
               />
             </View>
           </View>
@@ -126,10 +138,13 @@ export default function Login() {
                 secureTextEntry={!showPassword}
                 autoComplete="password"
                 editable={!loading}
+                accessibilityLabel="Mot de passe"
+                accessibilityHint="Saisissez votre mot de passe"
               />
               <TouchableOpacity 
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
+                accessibilityLabel={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
               >
                 {showPassword ? (
                   <EyeOff size={20} color="#9ca3af" />
@@ -141,9 +156,19 @@ export default function Login() {
           </View>
 
           <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={handleForgotPassword}
+            disabled={loading}
+          >
+            <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSubmit}
             disabled={loading}
+            accessibilityLabel="Se connecter"
+            accessibilityHint="Appuyez pour vous connecter"
           >
             <Text style={styles.buttonText}>
               {loading ? 'Connexion...' : 'Se connecter'}
@@ -268,6 +293,15 @@ const styles = StyleSheet.create({
   },
   eyeButton: {
     padding: 12,
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginBottom: 16,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#2563eb',
+    fontWeight: '500',
   },
   button: {
     backgroundColor: '#2563eb',

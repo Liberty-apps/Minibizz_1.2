@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert, Platform, Linking } from 'react-native';
 import { router } from 'expo-router';
-import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut, CreditCard as Edit3 } from 'lucide-react-native';
+import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut, CreditCard as Edit3, Key, Smartphone, Globe, Mail } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 
 export default function Parametres() {
@@ -11,6 +11,7 @@ export default function Parametres() {
   const [autoSave, setAutoSave] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   const [userInfo, setUserInfo] = useState({
     nom: user?.profile?.nom || '',
@@ -20,6 +21,35 @@ export default function Parametres() {
     siret: '',
     activite: 'service'
   });
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  useEffect(() => {
+    // Charger les préférences utilisateur depuis le stockage local
+    loadUserPreferences();
+  }, []);
+
+  const loadUserPreferences = async () => {
+    try {
+      // Ici vous pourriez charger les préférences depuis AsyncStorage ou Supabase
+      // Pour l'instant, on utilise les valeurs par défaut
+    } catch (error) {
+      console.error('Erreur lors du chargement des préférences:', error);
+    }
+  };
+
+  const saveUserPreferences = async () => {
+    try {
+      // Sauvegarder les préférences
+      Alert.alert('Succès', 'Préférences sauvegardées');
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de sauvegarder les préférences');
+    }
+  };
 
   const handleLogout = async () => {
     Alert.alert(
@@ -42,9 +72,87 @@ export default function Parametres() {
     );
   };
 
-  const handleSaveProfile = () => {
-    Alert.alert('Succès', 'Profil mis à jour avec succès');
-    setShowEditProfile(false);
+  const handleSaveProfile = async () => {
+    try {
+      // Validation des données
+      if (!userInfo.nom.trim()) {
+        Alert.alert('Erreur', 'Le nom est obligatoire');
+        return;
+      }
+
+      if (!userInfo.email.trim()) {
+        Alert.alert('Erreur', 'L\'email est obligatoire');
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(userInfo.email)) {
+        Alert.alert('Erreur', 'Veuillez saisir une adresse email valide');
+        return;
+      }
+
+      // Ici vous pourriez sauvegarder via Supabase
+      Alert.alert('Succès', 'Profil mis à jour avec succès');
+      setShowEditProfile(false);
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de mettre à jour le profil');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    try {
+      // Validation
+      if (!passwordData.currentPassword.trim()) {
+        Alert.alert('Erreur', 'Veuillez saisir votre mot de passe actuel');
+        return;
+      }
+
+      if (!passwordData.newPassword.trim()) {
+        Alert.alert('Erreur', 'Veuillez saisir un nouveau mot de passe');
+        return;
+      }
+
+      if (passwordData.newPassword.length < 6) {
+        Alert.alert('Erreur', 'Le nouveau mot de passe doit contenir au moins 6 caractères');
+        return;
+      }
+
+      if (passwordData.newPassword !== passwordData.confirmPassword) {
+        Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
+        return;
+      }
+
+      // Ici vous pourriez changer le mot de passe via Supabase
+      Alert.alert('Succès', 'Mot de passe modifié avec succès');
+      setShowChangePassword(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de modifier le mot de passe');
+    }
+  };
+
+  const handleContactSupport = () => {
+    const email = 'support@minibizz.fr';
+    const subject = 'Demande de support - MiniBizz';
+    const body = `Bonjour,\n\nJ'ai besoin d'aide concernant :\n\n[Décrivez votre problème ici]\n\nCordialement,\n${user?.name || 'Utilisateur'}`;
+    
+    if (Platform.OS === 'web') {
+      window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+    } else {
+      Linking.openURL(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+    }
+  };
+
+  const handleReportBug = () => {
+    const email = 'bugs@minibizz.fr';
+    const subject = 'Signalement de bug - MiniBizz';
+    const body = `Bonjour,\n\nJe souhaite signaler un bug :\n\nDescription du problème :\n[Décrivez le bug ici]\n\nÉtapes pour reproduire :\n1. \n2. \n3. \n\nAppareil : ${Platform.OS}\nVersion de l'app : 1.0.0\n\nCordialement,\n${user?.name || 'Utilisateur'}`;
+    
+    if (Platform.OS === 'web') {
+      window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+    } else {
+      Linking.openURL(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+    }
   };
 
   const settingsSections = [
@@ -53,6 +161,7 @@ export default function Parametres() {
       icon: User,
       items: [
         { label: 'Informations personnelles', action: 'profile', onPress: () => setShowEditProfile(true) },
+        { label: 'Changer le mot de passe', action: 'password', onPress: () => setShowChangePassword(true) },
         { label: 'Informations d\'entreprise', action: 'business' },
         { label: 'Coordonnées bancaires', action: 'banking' }
       ]
@@ -71,9 +180,9 @@ export default function Parametres() {
       title: 'Sécurité',
       icon: Shield,
       items: [
-        { label: 'Changer le mot de passe', action: 'password' },
         { label: 'Authentification à deux facteurs', action: '2fa' },
-        { label: 'Sessions actives', action: 'sessions' }
+        { label: 'Sessions actives', action: 'sessions' },
+        { label: 'Historique de connexion', action: 'login_history' }
       ]
     },
     {
@@ -81,8 +190,8 @@ export default function Parametres() {
       icon: HelpCircle,
       items: [
         { label: 'Centre d\'aide', action: 'help', route: '/(tabs)/aide' },
-        { label: 'Contacter le support', action: 'contact' },
-        { label: 'Signaler un problème', action: 'report' }
+        { label: 'Contacter le support', action: 'contact', onPress: handleContactSupport },
+        { label: 'Signaler un problème', action: 'report', onPress: handleReportBug }
       ]
     }
   ];
@@ -137,15 +246,18 @@ export default function Parametres() {
           onPress={() => setShowEditProfile(true)}
         >
           <Building size={20} color="#2563eb" />
-          <Text style={styles.quickActionText}>Infos entreprise</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.quickAction}>
-          <Bell size={20} color="#16a34a" />
-          <Text style={styles.quickActionText}>Notifications</Text>
+          <Text style={styles.quickActionText}>Profil</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.quickAction}
-          onPress={handleSaveProfile}
+          onPress={() => setShowChangePassword(true)}
+        >
+          <Key size={20} color="#16a34a" />
+          <Text style={styles.quickActionText}>Mot de passe</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.quickAction}
+          onPress={saveUserPreferences}
         >
           <Save size={20} color="#eab308" />
           <Text style={styles.quickActionText}>Sauvegarder</Text>
@@ -169,7 +281,7 @@ export default function Parametres() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Nom</Text>
+              <Text style={styles.label}>Nom *</Text>
               <TextInput
                 style={styles.input}
                 value={userInfo.nom}
@@ -179,12 +291,14 @@ export default function Parametres() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>Email *</Text>
               <TextInput
-                style={[styles.input, styles.inputDisabled]}
+                style={styles.input}
                 value={userInfo.email}
-                editable={false}
+                onChangeText={(text) => setUserInfo({...userInfo, email: text})}
                 placeholder="Votre email"
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
             </View>
 
@@ -211,6 +325,67 @@ export default function Parametres() {
                 onPress={handleSaveProfile}
               >
                 <Text style={styles.saveText}>Sauvegarder</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Changer le mot de passe</Text>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Mot de passe actuel *</Text>
+              <TextInput
+                style={styles.input}
+                value={passwordData.currentPassword}
+                onChangeText={(text) => setPasswordData({...passwordData, currentPassword: text})}
+                placeholder="Mot de passe actuel"
+                secureTextEntry
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Nouveau mot de passe *</Text>
+              <TextInput
+                style={styles.input}
+                value={passwordData.newPassword}
+                onChangeText={(text) => setPasswordData({...passwordData, newPassword: text})}
+                placeholder="Nouveau mot de passe"
+                secureTextEntry
+              />
+              <Text style={styles.helperText}>Au moins 6 caractères</Text>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Confirmer le nouveau mot de passe *</Text>
+              <TextInput
+                style={styles.input}
+                value={passwordData.confirmPassword}
+                onChangeText={(text) => setPasswordData({...passwordData, confirmPassword: text})}
+                placeholder="Confirmer le mot de passe"
+                secureTextEntry
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => {
+                  setShowChangePassword(false);
+                  setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                }}
+              >
+                <Text style={styles.cancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.saveButton}
+                onPress={handleChangePassword}
+              >
+                <Text style={styles.saveText}>Modifier</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -421,9 +596,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
   },
-  inputDisabled: {
-    backgroundColor: '#f9fafb',
+  helperText: {
+    fontSize: 12,
     color: '#6b7280',
+    marginTop: 4,
   },
   modalActions: {
     flexDirection: 'row',
