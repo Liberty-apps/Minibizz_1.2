@@ -1,14 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { router } from 'expo-router';
+import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
-interface User {
-  id: string;
-  email: string;
-  name?: string;
+interface AuthUser extends User {
+  profile?: {
+    nom?: string;
+    prenom?: string;
+    entreprise?: string;
+  };
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -18,50 +22,66 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session
-    checkAuthState();
+    // Vérifier la session existante
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadUserProfile(session.user);
+      }
+      setLoading(false);
+    });
+
+    // Écouter les changements d'authentification
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          await loadUserProfile(session.user);
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const checkAuthState = async () => {
+  const loadUserProfile = async (authUser: User) => {
     try {
-      // Simulate checking for stored auth token
-      const storedUser = await getStoredUser();
-      if (storedUser) {
-        setUser(storedUser);
-      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('nom, prenom, entreprise')
+        .eq('id', authUser.id)
+        .single();
+
+      setUser({
+        ...authUser,
+        profile: profile || undefined
+      });
     } catch (error) {
-      console.error('Auth check failed:', error);
-    } finally {
-      setLoading(false);
+      console.error('Erreur lors du chargement du profil:', error);
+      setUser(authUser);
     }
   };
 
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock validation
-      if (email && password.length >= 6) {
-        const mockUser: User = {
-          id: '1',
-          email,
-          name: email.split('@')[0]
-        };
-        
-        setUser(mockUser);
-        await storeUser(mockUser);
-      } else {
-        throw new Error('Identifiants invalides');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        await loadUserProfile(data.user);
       }
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      throw new Error(error.message || 'Erreur de connexion');
     } finally {
       setLoading(false);
     }
@@ -70,25 +90,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (email: string, password: string) => {
     try {
       setLoading(true);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock validation
-      if (email && password.length >= 6) {
-        const mockUser: User = {
-          id: Date.now().toString(),
-          email,
-          name: email.split('@')[0]
-        };
-        
-        setUser(mockUser);
-        await storeUser(mockUser);
-      } else {
-        throw new Error('Données invalides');
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Créer le profil utilisateur
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: data.user.email!,
+          });
+
+        if (profileError) {
+          console.error('Erreur création profil:', profileError);
+        }
+
+        await loadUserProfile(data.user);
       }
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      throw new Error(error.message || 'Erreur de création de compte');
     } finally {
       setLoading(false);
     }
@@ -96,11 +121,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
       setUser(null);
-      await removeStoredUser();
       router.replace('/(auth)/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
+    } catch (error: any) {
+      throw new Error(error.message || 'Erreur de déconnexion');
     }
   };
 
@@ -118,36 +145,3 @@ export function useAuth() {
   }
   return context;
 }
-
-// Mock storage functions (in a real app, use AsyncStorage or SecureStore)
-const getStoredUser = async (): Promise<User | null> => {
-  try {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('minibizz_user');
-      return stored ? JSON.parse(stored) : null;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-};
-
-const storeUser = async (user: User): Promise<void> => {
-  try {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('minibizz_user', JSON.stringify(user));
-    }
-  } catch (error) {
-    console.error('Failed to store user:', error);
-  }
-};
-
-const removeStoredUser = async (): Promise<void> => {
-  try {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('minibizz_user');
-    }
-  } catch (error) {
-    console.error('Failed to remove user:', error);
-  }
-};
