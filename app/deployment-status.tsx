@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { CheckCircle, XCircle, Clock, RefreshCw, ArrowLeft, ExternalLink } from 'lucide-react-native';
+import { CircleCheck as CheckCircle, Circle as XCircle, Clock, RefreshCw, ArrowLeft, ExternalLink } from 'lucide-react-native';
 
 export default function DeploymentStatus() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'in_progress'>('loading');
