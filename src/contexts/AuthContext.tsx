@@ -7,7 +7,6 @@ interface AuthUser extends User {
   profile?: {
     nom?: string;
     prenom?: string;
-    entreprise?: string;
   };
   name?: string;
 }
@@ -56,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('nom, prenom, entreprise')
+        .select('nom, prenom')
         .eq('id', authUser.id)
         .single();
 
