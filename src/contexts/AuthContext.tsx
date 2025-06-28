@@ -9,7 +9,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { Platform } from 'react-native';
-import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -101,9 +101,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Handle logout for different platforms
       if (Platform.OS === 'web') {
-        window.location.href = '/login';
+        router.replace('/(auth)/login');
       } else {
-        // For mobile, navigation will be handled by the router
+        router.replace('/(auth)/login');
       }
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
@@ -120,29 +120,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('État d\'authentification changé:', user?.email || 'Aucun utilisateur');
         setCurrentUser(user);
         setLoading(false);
+        
+        // Redirect based on auth state
+        if (user) {
+          // User is signed in, redirect to tabs if on auth pages
+          router.replace('/(tabs)');
+        } else {
+          // User is signed out, redirect to login
+          router.replace('/(auth)/login');
+        }
       },
       (error) => {
         console.error('Erreur du listener d\'authentification:', error);
         setLoading(false);
       }
     );
-
-    // Handle deep linking for mobile apps
-    if (Platform.OS !== 'web') {
-      const handleDeepLink = (url: string) => {
-        console.log('Deep link received:', url);
-        // Handle authentication redirects or other deep links
-      };
-
-      const subscription = Linking.addEventListener('url', ({ url }) => {
-        handleDeepLink(url);
-      });
-
-      return () => {
-        unsubscribe();
-        subscription?.remove();
-      };
-    }
 
     return unsubscribe;
   }, []);

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { router } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 
 interface PrivateRouteProps {
@@ -9,7 +9,13 @@ interface PrivateRouteProps {
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   const { currentUser } = useAuth();
   
-  return currentUser ? <>{children}</> : <Navigate to="/login" />;
+  useEffect(() => {
+    if (!currentUser) {
+      router.replace('/(auth)/login');
+    }
+  }, [currentUser]);
+  
+  return currentUser ? <>{children}</> : null;
 };
 
 export default PrivateRoute;
