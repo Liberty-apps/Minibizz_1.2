@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { FileText, Mail, Lock, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react-native';
+import { FileText, Mail, Lock, CircleAlert as AlertCircle, CircleCheck as CheckCircle, Eye, EyeOff } from 'lucide-react-native';
 
 export default function Register() {
   const [email, setEmail] = useState('');
