@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert, Platform, Linking } from 'react-native';
 import { router } from 'expo-router';
-import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut, CreditCard as Edit3, Key, Smartphone, Globe, Mail } from 'lucide-react-native';
+import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut, CreditCard as Edit3, Key, Smartphone, Globe, Mail, Crown, Calculator, FileText } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 
 export default function Parametres() {
@@ -186,12 +186,22 @@ export default function Parametres() {
       ]
     },
     {
+      title: 'Outils & Services',
+      icon: Calculator,
+      items: [
+        { label: 'Mon abonnement', action: 'subscription', route: '/(tabs)/abonnement', icon: Crown },
+        { label: 'Calculateur de charges', action: 'calculator', route: '/(tabs)/calculs', icon: Calculator },
+        { label: 'Sites vitrines', action: 'sites', route: '/(tabs)/sites-vitrines', icon: Globe },
+        { label: 'Centre d\'aide', action: 'help', route: '/(tabs)/aide', icon: HelpCircle }
+      ]
+    },
+    {
       title: 'Support',
       icon: HelpCircle,
       items: [
-        { label: 'Centre d\'aide', action: 'help', route: '/(tabs)/aide' },
         { label: 'Contacter le support', action: 'contact', onPress: handleContactSupport },
-        { label: 'Signaler un problème', action: 'report', onPress: handleReportBug }
+        { label: 'Signaler un problème', action: 'report', onPress: handleReportBug },
+        { label: 'Documentation', action: 'docs' }
       ]
     }
   ];
@@ -403,27 +413,33 @@ export default function Parametres() {
             </View>
             
             <View style={styles.sectionContent}>
-              {section.items.map((item, itemIndex) => (
-                <TouchableOpacity 
-                  key={itemIndex} 
-                  style={styles.settingItem}
-                  onPress={() => handleSettingPress(item.action, item.route, item.onPress)}
-                >
-                  <Text style={styles.settingLabel}>{item.label}</Text>
-                  <View style={styles.settingAction}>
-                    {item.toggle !== undefined ? (
-                      <Switch
-                        value={item.toggle}
-                        onValueChange={item.onToggle}
-                        trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
-                        thumbColor={item.toggle ? '#ffffff' : '#f3f4f6'}
-                      />
-                    ) : (
-                      <ChevronRight size={20} color="#9ca3af" />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {section.items.map((item, itemIndex) => {
+                const ItemIcon = item.icon;
+                return (
+                  <TouchableOpacity 
+                    key={itemIndex} 
+                    style={styles.settingItem}
+                    onPress={() => handleSettingPress(item.action, item.route, item.onPress)}
+                  >
+                    <View style={styles.settingItemLeft}>
+                      {ItemIcon && <ItemIcon size={18} color="#6b7280" style={styles.settingItemIcon} />}
+                      <Text style={styles.settingLabel}>{item.label}</Text>
+                    </View>
+                    <View style={styles.settingAction}>
+                      {item.toggle !== undefined ? (
+                        <Switch
+                          value={item.toggle}
+                          onValueChange={item.onToggle}
+                          trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
+                          thumbColor={item.toggle ? '#ffffff' : '#f3f4f6'}
+                        />
+                      ) : (
+                        <ChevronRight size={20} color="#9ca3af" />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         );
@@ -662,6 +678,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  settingItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  settingItemIcon: {
+    marginRight: 12,
   },
   settingLabel: {
     fontSize: 16,

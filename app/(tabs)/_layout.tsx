@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { LayoutDashboard, FileText, Users, Calendar, Settings, Calculator, CircleHelp as HelpCircle, Crown, Globe } from 'lucide-react-native';
+import { LayoutDashboard, FileText, Users, Calendar, Settings, Calculator } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -32,7 +32,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="devis"
         options={{
-          title: 'Devis',
+          title: 'Documents',
           tabBarIcon: ({ size, color }) => (
             <FileText size={size} color={color} />
           ),
@@ -57,38 +57,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="calculs"
+        name="outils"
         options={{
-          title: 'Calculs',
+          title: 'Outils',
           tabBarIcon: ({ size, color }) => (
             <Calculator size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="abonnement"
-        options={{
-          title: 'Abonnement',
-          tabBarIcon: ({ size, color }) => (
-            <Crown size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="sites-vitrines"
-        options={{
-          title: 'Sites',
-          tabBarIcon: ({ size, color }) => (
-            <Globe size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="aide"
-        options={{
-          title: 'Aide',
-          tabBarIcon: ({ size, color }) => (
-            <HelpCircle size={size} color={color} />
           ),
         }}
       />
@@ -99,6 +72,50 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <Settings size={size} color={color} />
           ),
+        }}
+      />
+      
+      {/* Pages cachées de la navigation principale */}
+      <Tabs.Screen
+        name="calculs"
+        options={{
+          href: null, // Cache cet onglet de la navigation
+        }}
+      />
+      <Tabs.Screen
+        name="abonnement"
+        options={{
+          href: null, // Cache cet onglet de la navigation
+        }}
+      />
+      <Tabs.Screen
+        name="sites-vitrines"
+        options={{
+          href: null, // Cache cet onglet de la navigation
+        }}
+      />
+      <Tabs.Screen
+        name="aide"
+        options={{
+          href: null, // Cache cet onglet de la navigation
+        }}
+      />
+      <Tabs.Screen
+        name="missions"
+        options={{
+          href: null, // Cache cet onglet de la navigation
+        }}
+      />
+      <Tabs.Screen
+        name="actualites"
+        options={{
+          href: null, // Cache cet onglet de la navigation
+        }}
+      />
+      <Tabs.Screen
+        name="devis-optimized"
+        options={{
+          href: null, // Cache cet onglet de la navigation
         }}
       />
     </Tabs>
