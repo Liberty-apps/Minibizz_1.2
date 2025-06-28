@@ -9,6 +9,7 @@ interface AuthUser extends User {
     prenom?: string;
     entreprise?: string;
   };
+  name?: string; // Ajout pour compatibilité
 }
 
 interface AuthContextType {
@@ -57,13 +58,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', authUser.id)
         .single();
 
-      setUser({
+      const userWithProfile: AuthUser = {
         ...authUser,
-        profile: profile || undefined
-      });
+        profile: profile || undefined,
+        name: profile?.nom ? `${profile.prenom || ''} ${profile.nom}`.trim() : authUser.email?.split('@')[0] || 'Utilisateur'
+      };
+
+      setUser(userWithProfile);
     } catch (error) {
       console.error('Erreur lors du chargement du profil:', error);
-      setUser(authUser);
+      // Créer un utilisateur de base même en cas d'erreur
+      const basicUser: AuthUser = {
+        ...authUser,
+        name: authUser.email?.split('@')[0] || 'Utilisateur'
+      };
+      setUser(basicUser);
     }
   };
 
@@ -99,15 +108,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user) {
         // Créer le profil utilisateur
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: data.user.email!,
-          });
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email!,
+            });
 
-        if (profileError) {
-          console.error('Erreur création profil:', profileError);
+          if (profileError) {
+            console.error('Erreur création profil:', profileError);
+          }
+        } catch (profileError) {
+          console.error('Erreur lors de la création du profil:', profileError);
         }
 
         await loadUserProfile(data.user);
