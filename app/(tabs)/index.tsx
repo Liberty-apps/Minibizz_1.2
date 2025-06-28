@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 import { 
   FileText, 
   Users, 
@@ -7,7 +8,10 @@ import {
   TrendingUp,
   Calendar,
   Plus,
-  ArrowRight
+  ArrowRight,
+  Calculator,
+  Crown,
+  Globe
 } from 'lucide-react-native';
 
 export default function Dashboard() {
@@ -17,36 +21,81 @@ export default function Dashboard() {
       value: '12',
       icon: Users,
       color: '#2563eb',
-      bgColor: '#eff6ff'
+      bgColor: '#eff6ff',
+      route: '/(tabs)/clients'
     },
     {
       name: 'Devis',
       value: '8',
       icon: FileText,
       color: '#eab308',
-      bgColor: '#fefce8'
+      bgColor: '#fefce8',
+      route: '/(tabs)/devis'
     },
     {
       name: 'CA Mensuel',
       value: '3 450€',
       icon: Euro,
       color: '#16a34a',
-      bgColor: '#f0fdf4'
+      bgColor: '#f0fdf4',
+      route: '/(tabs)/calculs'
     },
     {
       name: 'Croissance',
       value: '+15%',
       icon: TrendingUp,
       color: '#9333ea',
-      bgColor: '#faf5ff'
+      bgColor: '#faf5ff',
+      route: '/(tabs)/calculs'
     }
   ];
 
   const quickActions = [
-    { title: 'Nouveau devis', icon: FileText, color: '#2563eb' },
-    { title: 'Ajouter client', icon: Users, color: '#16a34a' },
-    { title: 'Planifier RDV', icon: Calendar, color: '#eab308' }
+    { 
+      title: 'Nouveau devis', 
+      icon: FileText, 
+      color: '#2563eb',
+      route: '/(tabs)/devis'
+    },
+    { 
+      title: 'Ajouter client', 
+      icon: Users, 
+      color: '#16a34a',
+      route: '/(tabs)/clients'
+    },
+    { 
+      title: 'Planifier RDV', 
+      icon: Calendar, 
+      color: '#eab308',
+      route: '/(tabs)/planning'
+    },
+    { 
+      title: 'Calculer charges', 
+      icon: Calculator, 
+      color: '#dc2626',
+      route: '/(tabs)/calculs'
+    },
+    { 
+      title: 'Mon abonnement', 
+      icon: Crown, 
+      color: '#9333ea',
+      route: '/(tabs)/abonnement'
+    },
+    { 
+      title: 'Créer un site', 
+      icon: Globe, 
+      color: '#059669',
+      route: '/(tabs)/sites-vitrines'
+    }
   ];
+
+  const handleStatPress = (route: string) => {
+    router.push(route as any);
+  };
+
+  const handleActionPress = (route: string) => {
+    router.push(route as any);
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -73,7 +122,11 @@ export default function Dashboard() {
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <View key={index} style={[styles.statCard, { backgroundColor: stat.bgColor }]}>
+            <TouchableOpacity 
+              key={index} 
+              style={[styles.statCard, { backgroundColor: stat.bgColor }]}
+              onPress={() => handleStatPress(stat.route)}
+            >
               <View style={styles.statContent}>
                 <View>
                   <Text style={styles.statLabel}>{stat.name}</Text>
@@ -83,7 +136,7 @@ export default function Dashboard() {
                   <Icon size={20} color="#ffffff" />
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -95,7 +148,11 @@ export default function Dashboard() {
           {quickActions.map((action, index) => {
             const Icon = action.icon;
             return (
-              <TouchableOpacity key={index} style={styles.quickAction}>
+              <TouchableOpacity 
+                key={index} 
+                style={styles.quickAction}
+                onPress={() => handleActionPress(action.route)}
+              >
                 <View style={[styles.quickActionIcon, { backgroundColor: action.color }]}>
                   <Icon size={24} color="#ffffff" />
                 </View>
@@ -111,7 +168,10 @@ export default function Dashboard() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Activité récente</Text>
         <View style={styles.activityCard}>
-          <View style={styles.activityItem}>
+          <TouchableOpacity 
+            style={styles.activityItem}
+            onPress={() => router.push('/(tabs)/devis')}
+          >
             <View style={styles.activityIcon}>
               <FileText size={16} color="#2563eb" />
             </View>
@@ -120,9 +180,12 @@ export default function Dashboard() {
               <Text style={styles.activitySubtitle}>Client: Entreprise ABC</Text>
             </View>
             <Text style={styles.activityValue}>1 250€</Text>
-          </View>
+          </TouchableOpacity>
           
-          <View style={styles.activityItem}>
+          <TouchableOpacity 
+            style={styles.activityItem}
+            onPress={() => router.push('/(tabs)/clients')}
+          >
             <View style={styles.activityIcon}>
               <Users size={16} color="#16a34a" />
             </View>
@@ -131,9 +194,12 @@ export default function Dashboard() {
               <Text style={styles.activitySubtitle}>Marie Dupont</Text>
             </View>
             <Text style={styles.activityTime}>Il y a 2h</Text>
-          </View>
+          </TouchableOpacity>
           
-          <View style={styles.activityItem}>
+          <TouchableOpacity 
+            style={styles.activityItem}
+            onPress={() => router.push('/(tabs)/planning')}
+          >
             <View style={styles.activityIcon}>
               <Calendar size={16} color="#eab308" />
             </View>
@@ -142,20 +208,23 @@ export default function Dashboard() {
               <Text style={styles.activitySubtitle}>Demain 14h00</Text>
             </View>
             <Text style={styles.activityTime}>Il y a 1h</Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* Revenue Chart Placeholder */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Évolution du CA</Text>
-        <View style={styles.chartCard}>
+        <TouchableOpacity 
+          style={styles.chartCard}
+          onPress={() => router.push('/(tabs)/calculs')}
+        >
           <View style={styles.chartPlaceholder}>
             <TrendingUp size={48} color="#d1d5db" />
             <Text style={styles.chartText}>Graphique des revenus</Text>
             <Text style={styles.chartSubtext}>Évolution mensuelle</Text>
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert } from 'react-native';
+import { router } from 'expo-router';
 import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 
@@ -58,12 +59,21 @@ export default function Parametres() {
       title: 'Support',
       icon: HelpCircle,
       items: [
-        { label: 'Centre d\'aide', action: 'help' },
+        { label: 'Centre d\'aide', action: 'help', route: '/(tabs)/aide' },
         { label: 'Contacter le support', action: 'contact' },
         { label: 'Signaler un problème', action: 'report' }
       ]
     }
   ];
+
+  const handleSettingPress = (action: string, route?: string) => {
+    if (route) {
+      router.push(route as any);
+    } else {
+      // Gérer les autres actions
+      console.log('Action:', action);
+    }
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -118,7 +128,11 @@ export default function Parametres() {
             
             <View style={styles.sectionContent}>
               {section.items.map((item, itemIndex) => (
-                <TouchableOpacity key={itemIndex} style={styles.settingItem}>
+                <TouchableOpacity 
+                  key={itemIndex} 
+                  style={styles.settingItem}
+                  onPress={() => handleSettingPress(item.action, item.route)}
+                >
                   <Text style={styles.settingLabel}>{item.label}</Text>
                   <View style={styles.settingAction}>
                     {item.toggle !== undefined ? (
