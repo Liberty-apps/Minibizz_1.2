@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut, Edit3 } from 'lucide-react-native';
+import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut, CreditCard as Edit3 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 
 export default function Parametres() {

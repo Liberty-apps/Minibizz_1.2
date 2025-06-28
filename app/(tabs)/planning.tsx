@@ -1,19 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { 
-  Calendar, 
-  Plus, 
-  Clock,
-  User,
-  MapPin,
-  ChevronLeft,
-  ChevronRight,
-  Filter,
-  CheckCircle,
-  AlertCircle,
-  XCircle
-} from 'lucide-react-native';
+import { Calendar, Plus, Clock, User, MapPin, ChevronLeft, ChevronRight, Filter, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Circle as XCircle } from 'lucide-react-native';
 
 export default function Planning() {
   const [currentDate, setCurrentDate] = useState(new Date());
