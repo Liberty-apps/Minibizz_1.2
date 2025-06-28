@@ -1,14 +1,5 @@
 import { Tabs } from 'expo-router';
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Users, 
-  Calendar,
-  Handshake,
-  Newspaper,
-  HelpCircle,
-  Settings
-} from 'lucide-react-native';
+import { LayoutDashboard, FileText, Users, Calendar, Handshake, Newspaper, CircleHelp as HelpCircle, Settings } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
