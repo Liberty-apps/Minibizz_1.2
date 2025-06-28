@@ -1,21 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
-import { 
-  FileText, 
-  Users, 
-  Euro, 
-  TrendingUp,
-  Calendar,
-  Plus,
-  ArrowRight,
-  Calculator,
-  Crown,
-  Globe,
-  AlertCircle,
-  Clock,
-  CheckCircle
-} from 'lucide-react-native';
+import { FileText, Users, Euro, TrendingUp, Calendar, Plus, ArrowRight, Calculator, Crown, Globe, CircleAlert as AlertCircle, Clock, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { dashboardService } from '../../src/services/database';
 

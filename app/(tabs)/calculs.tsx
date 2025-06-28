@@ -1,17 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
-import { 
-  Calculator, 
-  Euro, 
-  TrendingUp,
-  TrendingDown,
-  Info,
-  BarChart3,
-  PieChart,
-  Target,
-  AlertTriangle,
-  CheckCircle
-} from 'lucide-react-native';
+import { Calculator, Euro, TrendingUp, TrendingDown, Info, ChartBar as BarChart3, ChartPie as PieChart, Target, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
 
 export default function Calculs() {
   const [chiffreAffaires, setChiffreAffaires] = useState('');
