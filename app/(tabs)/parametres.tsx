@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut } from 'lucide-react-native';
+import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut, Edit3 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 
 export default function Parametres() {
@@ -9,10 +9,12 @@ export default function Parametres() {
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [autoSave, setAutoSave] = useState(true);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   const [userInfo, setUserInfo] = useState({
-    nom: '',
-    prenom: '',
+    nom: user?.profile?.nom || '',
+    prenom: user?.profile?.prenom || '',
     email: user?.email || '',
     telephone: '',
     siret: '',
@@ -20,11 +22,29 @@ export default function Parametres() {
   });
 
   const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible de se déconnecter');
-    }
+    Alert.alert(
+      'Déconnexion',
+      'Êtes-vous sûr de vouloir vous déconnecter ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Déconnecter',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (error) {
+              Alert.alert('Erreur', 'Impossible de se déconnecter');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleSaveProfile = () => {
+    Alert.alert('Succès', 'Profil mis à jour avec succès');
+    setShowEditProfile(false);
   };
 
   const settingsSections = [
@@ -32,7 +52,7 @@ export default function Parametres() {
       title: 'Profil',
       icon: User,
       items: [
-        { label: 'Informations personnelles', action: 'profile' },
+        { label: 'Informations personnelles', action: 'profile', onPress: () => setShowEditProfile(true) },
         { label: 'Informations d\'entreprise', action: 'business' },
         { label: 'Coordonnées bancaires', action: 'banking' }
       ]
@@ -41,7 +61,8 @@ export default function Parametres() {
       title: 'Application',
       icon: Settings,
       items: [
-        { label: 'Notifications', action: 'notifications', toggle: notifications, onToggle: setNotifications },
+        { label: 'Notifications push', action: 'notifications', toggle: notifications, onToggle: setNotifications },
+        { label: 'Notifications email', action: 'email_notifications', toggle: emailNotifications, onToggle: setEmailNotifications },
         { label: 'Mode sombre', action: 'darkmode', toggle: darkMode, onToggle: setDarkMode },
         { label: 'Sauvegarde automatique', action: 'autosave', toggle: autoSave, onToggle: setAutoSave }
       ]
@@ -66,12 +87,15 @@ export default function Parametres() {
     }
   ];
 
-  const handleSettingPress = (action: string, route?: string) => {
-    if (route) {
+  const handleSettingPress = (action: string, route?: string, onPress?: () => void) => {
+    if (onPress) {
+      onPress();
+    } else if (route) {
       router.push(route as any);
     } else {
       // Gérer les autres actions
       console.log('Action:', action);
+      Alert.alert('Information', `Fonctionnalité "${action}" en cours de développement`);
     }
   };
 
@@ -87,22 +111,31 @@ export default function Parametres() {
       <View style={styles.profileSummary}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+            {user?.name ? user.name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
           </Text>
         </View>
         <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{user?.name || 'Utilisateur'}</Text>
+          <Text style={styles.profileName}>
+            {user?.name || user?.email?.split('@')[0] || 'Utilisateur'}
+          </Text>
           <Text style={styles.profileEmail}>{user?.email}</Text>
           <Text style={styles.profileStatus}>Auto-entrepreneur • Actif</Text>
         </View>
-        <TouchableOpacity style={styles.editProfileButton}>
+        <TouchableOpacity 
+          style={styles.editProfileButton}
+          onPress={() => setShowEditProfile(true)}
+        >
+          <Edit3 size={16} color="#374151" />
           <Text style={styles.editProfileText}>Modifier</Text>
         </TouchableOpacity>
       </View>
 
       {/* Quick Actions */}
       <View style={styles.quickActions}>
-        <TouchableOpacity style={styles.quickAction}>
+        <TouchableOpacity 
+          style={styles.quickAction}
+          onPress={() => setShowEditProfile(true)}
+        >
           <Building size={20} color="#2563eb" />
           <Text style={styles.quickActionText}>Infos entreprise</Text>
         </TouchableOpacity>
@@ -110,11 +143,79 @@ export default function Parametres() {
           <Bell size={20} color="#16a34a" />
           <Text style={styles.quickActionText}>Notifications</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.quickAction}>
+        <TouchableOpacity 
+          style={styles.quickAction}
+          onPress={handleSaveProfile}
+        >
           <Save size={20} color="#eab308" />
           <Text style={styles.quickActionText}>Sauvegarder</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Edit Profile Modal */}
+      {showEditProfile && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Modifier le profil</Text>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Prénom</Text>
+              <TextInput
+                style={styles.input}
+                value={userInfo.prenom}
+                onChangeText={(text) => setUserInfo({...userInfo, prenom: text})}
+                placeholder="Votre prénom"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Nom</Text>
+              <TextInput
+                style={styles.input}
+                value={userInfo.nom}
+                onChangeText={(text) => setUserInfo({...userInfo, nom: text})}
+                placeholder="Votre nom"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={[styles.input, styles.inputDisabled]}
+                value={userInfo.email}
+                editable={false}
+                placeholder="Votre email"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Téléphone</Text>
+              <TextInput
+                style={styles.input}
+                value={userInfo.telephone}
+                onChangeText={(text) => setUserInfo({...userInfo, telephone: text})}
+                placeholder="Votre téléphone"
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => setShowEditProfile(false)}
+              >
+                <Text style={styles.cancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.saveButton}
+                onPress={handleSaveProfile}
+              >
+                <Text style={styles.saveText}>Sauvegarder</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Settings Sections */}
       {settingsSections.map((section, sectionIndex) => {
@@ -131,7 +232,7 @@ export default function Parametres() {
                 <TouchableOpacity 
                   key={itemIndex} 
                   style={styles.settingItem}
-                  onPress={() => handleSettingPress(item.action, item.route)}
+                  onPress={() => handleSettingPress(item.action, item.route, item.onPress)}
                 >
                   <Text style={styles.settingLabel}>{item.label}</Text>
                   <View style={styles.settingAction}>
@@ -159,6 +260,9 @@ export default function Parametres() {
         <Text style={styles.appInfoVersion}>Version 1.0.0</Text>
         <Text style={styles.appInfoText}>
           Application de gestion pour auto-entrepreneurs
+        </Text>
+        <Text style={styles.appInfoCopyright}>
+          © 2024 MiniBizz. Tous droits réservés.
         </Text>
       </View>
 
@@ -237,10 +341,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   editProfileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f3f4f6',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
+    gap: 4,
   },
   editProfileText: {
     fontSize: 14,
@@ -270,6 +377,81 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 8,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    margin: 16,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 20,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#111827',
+  },
+  inputDisabled: {
+    backgroundColor: '#f9fafb',
+    color: '#6b7280',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 20,
+  },
+  cancelButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+  },
+  cancelText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  saveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#2563eb',
+  },
+  saveText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#ffffff',
   },
   settingsSection: {
     backgroundColor: '#ffffff',
@@ -331,6 +513,12 @@ const styles = StyleSheet.create({
   },
   appInfoText: {
     fontSize: 14,
+    color: '#9ca3af',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  appInfoCopyright: {
+    fontSize: 12,
     color: '#9ca3af',
     marginTop: 8,
     textAlign: 'center',
