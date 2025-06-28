@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { FileText, Mail, Lock, CircleAlert as AlertCircle, CircleCheck as CheckCircle, Eye, EyeOff } from 'lucide-react-native';
+import { FileText, Mail, Lock, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react-native';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -70,7 +70,6 @@ export default function Register() {
     } catch (error: any) {
       console.error('Registration failed:', error);
       
-      // Messages d'erreur plus explicites
       let errorMessage = 'Échec de la création du compte. Vérifiez vos informations.';
       
       if (error.message.includes('Configuration Supabase manquante')) {
@@ -118,7 +117,10 @@ export default function Register() {
               <TextInput
                 style={styles.input}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (error) setError('');
+                }}
                 placeholder="votre@email.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -135,7 +137,10 @@ export default function Register() {
               <TextInput
                 style={styles.input}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (error) setError('');
+                }}
                 placeholder="••••••••"
                 secureTextEntry={!showPassword}
                 autoComplete="new-password"
@@ -183,7 +188,10 @@ export default function Register() {
               <TextInput
                 style={styles.input}
                 value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                onChangeText={(text) => {
+                  setConfirmPassword(text);
+                  if (error) setError('');
+                }}
                 placeholder="••••••••"
                 secureTextEntry={!showConfirmPassword}
                 autoComplete="new-password"
@@ -201,7 +209,7 @@ export default function Register() {
               </TouchableOpacity>
               {isPasswordMatch && (
                 <View style={styles.checkIcon}>
-                  <CircleCheck color="#10b981" size={20} />
+                  <CheckCircle color="#10b981" size={20} />
                 </View>
               )}
             </View>

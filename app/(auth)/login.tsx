@@ -2,44 +2,49 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { FileText, Mail, Lock, CircleAlert as AlertCircle, Wifi, WifiOff } from 'lucide-react-native';
+import { FileText, Mail, Lock, AlertCircle, Wifi, WifiOff, Eye, EyeOff } from 'lucide-react-native';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
+  const validateForm = () => {
+    if (!email.trim()) {
+      return 'Veuillez saisir votre adresse email';
+    }
+
+    if (!password.trim()) {
+      return 'Veuillez saisir votre mot de passe';
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return 'Veuillez saisir une adresse email valide';
+    }
+
+    return null;
+  };
+
   const handleSubmit = async () => {
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     try {
       setError('');
       setLoading(true);
-
-      // Validation basique
-      if (!email.trim()) {
-        setError('Veuillez saisir votre adresse email');
-        return;
-      }
-
-      if (!password.trim()) {
-        setError('Veuillez saisir votre mot de passe');
-        return;
-      }
-
-      // Validation format email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        setError('Veuillez saisir une adresse email valide');
-        return;
-      }
 
       await login(email.trim(), password);
       router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Login failed:', error);
       
-      // Messages d'erreur plus explicites pour l'utilisateur
       let errorMessage = 'Échec de la connexion. Vérifiez vos identifiants.';
       
       if (error.message.includes('Configuration Supabase manquante')) {
@@ -93,7 +98,10 @@ export default function Login() {
               <TextInput
                 style={styles.input}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (error) setError('');
+                }}
                 placeholder="votre@email.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -110,12 +118,25 @@ export default function Login() {
               <TextInput
                 style={styles.input}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (error) setError('');
+                }}
                 placeholder="••••••••"
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 autoComplete="password"
                 editable={!loading}
               />
+              <TouchableOpacity 
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} color="#9ca3af" />
+                ) : (
+                  <Eye size={20} color="#9ca3af" />
+                )}
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -244,6 +265,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 16,
     color: '#111827',
+  },
+  eyeButton: {
+    padding: 12,
   },
   button: {
     backgroundColor: '#2563eb',

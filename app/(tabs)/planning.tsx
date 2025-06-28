@@ -1,58 +1,52 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { Calendar, Plus, Clock, User, MapPin, ChevronLeft, ChevronRight, Filter, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Circle as XCircle } from 'lucide-react-native';
+import { 
+  Calendar, 
+  Plus, 
+  Clock, 
+  User, 
+  MapPin, 
+  ChevronLeft, 
+  ChevronRight, 
+  Filter, 
+  CheckCircle, 
+  AlertCircle, 
+  Circle as XCircle,
+  Phone,
+  Video,
+  Users as UsersIcon
+} from 'lucide-react-native';
+import { useAuth } from '../../src/contexts/AuthContext';
+import { planningService } from '../../src/services/database';
 
 export default function Planning() {
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'today' | 'week'>('today');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'today' | 'week' | 'month'>('today');
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const events = [
-    {
-      id: '1',
-      title: 'RDV Client ABC',
-      time: '09:00 - 10:30',
-      client: 'Entreprise ABC',
-      location: 'Bureau client',
-      type: 'meeting',
-      statut: 'confirme',
-      color: '#2563eb',
-      date: new Date()
-    },
-    {
-      id: '2',
-      title: 'Présentation projet',
-      time: '14:00 - 15:00',
-      client: 'Marie Dupont',
-      location: 'Visioconférence',
-      type: 'presentation',
-      statut: 'planifie',
-      color: '#16a34a',
-      date: new Date()
-    },
-    {
-      id: '3',
-      title: 'Suivi projet',
-      time: '16:30 - 17:30',
-      client: 'Tech Solutions',
-      location: 'Téléphone',
-      type: 'call',
-      statut: 'reporte',
-      color: '#eab308',
-      date: new Date(Date.now() + 86400000) // Demain
-    },
-    {
-      id: '4',
-      title: 'Formation client',
-      time: '10:00 - 12:00',
-      client: 'Jean Martin',
-      location: 'Sur site',
-      type: 'formation',
-      statut: 'termine',
-      color: '#9333ea',
-      date: new Date(Date.now() - 86400000) // Hier
+  useEffect(() => {
+    loadEvents();
+  }, [user]);
+
+  const loadEvents = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await planningService.getAll(user.id);
+      setEvents(data);
+    } catch (error) {
+      console.error('Erreur lors du chargement du planning:', error);
+      setError('Impossible de charger le planning');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   const currentMonth = currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -64,7 +58,7 @@ export default function Planning() {
     switch (selectedFilter) {
       case 'today':
         return events.filter(event => {
-          const eventDate = new Date(event.date);
+          const eventDate = new Date(event.date_debut);
           eventDate.setHours(0, 0, 0, 0);
           return eventDate.getTime() === today.getTime();
         });
@@ -74,8 +68,15 @@ export default function Planning() {
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekStart.getDate() + 6);
         return events.filter(event => {
-          const eventDate = new Date(event.date);
+          const eventDate = new Date(event.date_debut);
           return eventDate >= weekStart && eventDate <= weekEnd;
+        });
+      case 'month':
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        return events.filter(event => {
+          const eventDate = new Date(event.date_debut);
+          return eventDate >= monthStart && eventDate <= monthEnd;
         });
       default:
         return events;
@@ -111,15 +112,76 @@ export default function Planning() {
     }
   };
 
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'rdv':
+        return User;
+      case 'prestation':
+        return UsersIcon;
+      case 'relance':
+        return Phone;
+      case 'autre':
+        return Video;
+      default:
+        return Calendar;
+    }
+  };
+
   const handleAddEvent = () => {
-    console.log('Ajouter un événement');
+    router.push('/planning/create');
   };
 
   const handleEventPress = (eventId: string) => {
-    console.log('Voir événement:', eventId);
+    router.push(`/planning/${eventId}`);
+  };
+
+  const handleEditEvent = (eventId: string) => {
+    router.push(`/planning/${eventId}/edit`);
+  };
+
+  const handleDeleteEvent = (eventId: string, eventTitle: string) => {
+    Alert.alert(
+      'Confirmer la suppression',
+      `Êtes-vous sûr de vouloir supprimer l'événement "${eventTitle}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await planningService.delete(eventId);
+              Alert.alert('Succès', 'Événement supprimé avec succès');
+              loadEvents();
+            } catch (error) {
+              Alert.alert('Erreur', 'Impossible de supprimer l\'événement');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    if (direction === 'prev') {
+      newDate.setMonth(newDate.getMonth() - 1);
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+    setCurrentDate(newDate);
   };
 
   const filteredEvents = getFilteredEvents();
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Calendar size={48} color="#2563eb" />
+        <Text style={styles.loadingText}>Chargement du planning...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -136,13 +198,30 @@ export default function Planning() {
         </TouchableOpacity>
       </View>
 
+      {/* Error Display */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <AlertCircle size={20} color="#dc2626" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadEvents}>
+            <Text style={styles.retryText}>Réessayer</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Calendar Navigation */}
       <View style={styles.calendarHeader}>
-        <TouchableOpacity style={styles.navButton}>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => navigateMonth('prev')}
+        >
           <ChevronLeft size={20} color="#6b7280" />
         </TouchableOpacity>
         <Text style={styles.monthTitle}>{currentMonth}</Text>
-        <TouchableOpacity style={styles.navButton}>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => navigateMonth('next')}
+        >
           <ChevronRight size={20} color="#6b7280" />
         </TouchableOpacity>
       </View>
@@ -171,7 +250,15 @@ export default function Planning() {
           onPress={() => setSelectedFilter('week')}
         >
           <Text style={[styles.filterText, selectedFilter === 'week' && styles.activeFilterText]}>
-            Cette semaine
+            Semaine
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.filterTab, selectedFilter === 'month' && styles.activeFilterTab]}
+          onPress={() => setSelectedFilter('month')}
+        >
+          <Text style={[styles.filterText, selectedFilter === 'month' && styles.activeFilterText]}>
+            Mois
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -195,14 +282,30 @@ export default function Planning() {
                 ? 'Aucun événement prévu aujourd\'hui'
                 : selectedFilter === 'week'
                 ? 'Aucun événement cette semaine'
+                : selectedFilter === 'month'
+                ? 'Aucun événement ce mois-ci'
                 : 'Votre planning est vide'
               }
             </Text>
+            <TouchableOpacity style={styles.createFirstButton} onPress={handleAddEvent}>
+              <Text style={styles.createFirstText}>Planifier un événement</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           filteredEvents.map((event) => {
             const StatutIcon = getStatutIcon(event.statut);
+            const TypeIcon = getTypeIcon(event.type_evenement);
             const statutColor = getStatutColor(event.statut);
+            const eventDate = new Date(event.date_debut);
+            const eventTime = eventDate.toLocaleTimeString('fr-FR', { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            });
+            const eventEndTime = event.date_fin ? 
+              new Date(event.date_fin).toLocaleTimeString('fr-FR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              }) : null;
             
             return (
               <TouchableOpacity 
@@ -210,26 +313,46 @@ export default function Planning() {
                 style={styles.eventCard}
                 onPress={() => handleEventPress(event.id)}
               >
-                <View style={[styles.eventIndicator, { backgroundColor: event.color }]} />
+                <View style={[styles.eventIndicator, { backgroundColor: statutColor }]} />
                 <View style={styles.eventContent}>
                   <View style={styles.eventHeader}>
-                    <Text style={styles.eventTitle}>{event.title}</Text>
+                    <View style={styles.eventTitleRow}>
+                      <TypeIcon size={16} color="#6b7280" />
+                      <Text style={styles.eventTitle}>{event.titre}</Text>
+                    </View>
                     <View style={styles.eventStatus}>
                       <StatutIcon size={16} color={statutColor} />
                       <Text style={[styles.eventTime, { color: statutColor }]}>
-                        {event.time}
+                        {eventTime}{eventEndTime ? ` - ${eventEndTime}` : ''}
                       </Text>
                     </View>
                   </View>
+                  
                   <View style={styles.eventDetails}>
                     <View style={styles.eventDetail}>
-                      <User size={14} color="#6b7280" />
-                      <Text style={styles.eventDetailText}>{event.client}</Text>
+                      <Calendar size={14} color="#6b7280" />
+                      <Text style={styles.eventDetailText}>
+                        {eventDate.toLocaleDateString('fr-FR')}
+                      </Text>
                     </View>
-                    <View style={styles.eventDetail}>
-                      <MapPin size={14} color="#6b7280" />
-                      <Text style={styles.eventDetailText}>{event.location}</Text>
-                    </View>
+                    
+                    {event.client && (
+                      <View style={styles.eventDetail}>
+                        <User size={14} color="#6b7280" />
+                        <Text style={styles.eventDetailText}>{event.client.nom}</Text>
+                      </View>
+                    )}
+                    
+                    {event.lieu && (
+                      <View style={styles.eventDetail}>
+                        <MapPin size={14} color="#6b7280" />
+                        <Text style={styles.eventDetailText}>{event.lieu}</Text>
+                      </View>
+                    )}
+                    
+                    {event.description && (
+                      <Text style={styles.eventDescription}>{event.description}</Text>
+                    )}
                   </View>
                 </View>
               </TouchableOpacity>
@@ -245,7 +368,7 @@ export default function Planning() {
           <Text style={styles.statNumber}>
             {events.filter(e => {
               const today = new Date();
-              const eventDate = new Date(e.date);
+              const eventDate = new Date(e.date_debut);
               return eventDate.toDateString() === today.toDateString();
             }).length}
           </Text>
@@ -275,6 +398,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f9fafb',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 12,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -301,6 +435,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+    margin: 16,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#dc2626',
+    marginLeft: 8,
+  },
+  retryButton: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  retryText: {
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: '500',
+  },
   calendarHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -323,6 +484,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
+    textTransform: 'capitalize',
   },
   weekDaysContainer: {
     flexDirection: 'row',
@@ -390,6 +552,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 32,
   },
+  createFirstButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 24,
+  },
+  createFirstText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
   eventCard: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
@@ -413,8 +587,14 @@ const styles = StyleSheet.create({
   eventHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 8,
+  },
+  eventTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 8,
   },
   eventTitle: {
     fontSize: 16,
@@ -442,6 +622,12 @@ const styles = StyleSheet.create({
   eventDetailText: {
     fontSize: 14,
     color: '#6b7280',
+  },
+  eventDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontStyle: 'italic',
+    marginTop: 4,
   },
   statsContainer: {
     flexDirection: 'row',

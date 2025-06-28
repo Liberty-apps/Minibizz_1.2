@@ -1,105 +1,129 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { FileText, Plus, Search, Filter, Eye, CreditCard as Edit3, Download, Send, Calendar, Euro } from 'lucide-react-native';
+import { FileText, Plus, Search, Filter, Eye, Edit3, Download, Send, Calendar, Euro, Clock, CheckCircle, AlertCircle } from 'lucide-react-native';
+import { useAuth } from '../../src/contexts/AuthContext';
+import { devisService, facturesService } from '../../src/services/database';
 
 export default function Devis() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'devis' | 'factures'>('devis');
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [devisList, setDevisList] = useState<any[]>([]);
+  const [facturesList, setFacturesList] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const devisList = [
-    {
-      id: '1',
-      numero: 'DEV-2024-001',
-      client: 'Entreprise ABC',
-      date: '15/01/2024',
-      montant: '1 250€',
-      statut: 'En attente',
-      statutColor: '#eab308',
-      validite: '15/02/2024'
-    },
-    {
-      id: '2',
-      numero: 'DEV-2024-002',
-      client: 'Marie Dupont',
-      date: '12/01/2024',
-      montant: '850€',
-      statut: 'Accepté',
-      statutColor: '#16a34a',
-      validite: '12/02/2024'
-    },
-    {
-      id: '3',
-      numero: 'DEV-2024-003',
-      client: 'Tech Solutions',
-      date: '10/01/2024',
-      montant: '2 100€',
-      statut: 'Brouillon',
-      statutColor: '#6b7280',
-      validite: '10/02/2024'
-    }
-  ];
+  useEffect(() => {
+    loadData();
+  }, [user]);
 
-  const facturesList = [
-    {
-      id: '1',
-      numero: 'FAC-2024-001',
-      client: 'Entreprise ABC',
-      date: '20/01/2024',
-      echeance: '20/02/2024',
-      montant: '1 250€',
-      statut: 'Payée',
-      statutColor: '#16a34a'
-    },
-    {
-      id: '2',
-      numero: 'FAC-2024-002',
-      client: 'Marie Dupont',
-      date: '18/01/2024',
-      echeance: '18/02/2024',
-      montant: '850€',
-      statut: 'Envoyée',
-      statutColor: '#2563eb'
-    },
-    {
-      id: '3',
-      numero: 'FAC-2024-003',
-      client: 'Tech Solutions',
-      date: '16/01/2024',
-      echeance: '16/02/2024',
-      montant: '2 100€',
-      statut: 'En retard',
-      statutColor: '#dc2626'
+  const loadData = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [devisData, facturesData] = await Promise.all([
+        devisService.getAll(user.id),
+        facturesService.getAll(user.id)
+      ]);
+      
+      setDevisList(devisData);
+      setFacturesList(facturesData);
+    } catch (error) {
+      console.error('Erreur lors du chargement:', error);
+      setError('Impossible de charger les documents');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const currentList = activeTab === 'devis' ? devisList : facturesList;
 
   const filteredList = currentList.filter(item =>
-    item.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.client?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.numero.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCreateNew = () => {
-    // Navigation vers la création d'un nouveau document
-    console.log(`Créer nouveau ${activeTab}`);
+  const handleCreateNew = async () => {
+    if (!user) {
+      Alert.alert('Erreur', 'Vous devez être connecté');
+      return;
+    }
+
+    try {
+      if (activeTab === 'devis') {
+        const numero = await devisService.generateNumero(user.id);
+        router.push(`/devis/create?numero=${numero}`);
+      } else {
+        const numero = await facturesService.generateNumero(user.id);
+        router.push(`/factures/create?numero=${numero}`);
+      }
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de créer le document');
+    }
   };
 
   const handleViewDocument = (id: string) => {
-    console.log(`Voir ${activeTab} ${id}`);
+    router.push(`/${activeTab}/${id}`);
   };
 
   const handleEditDocument = (id: string) => {
-    console.log(`Modifier ${activeTab} ${id}`);
+    router.push(`/${activeTab}/${id}/edit`);
   };
 
   const handleDownloadDocument = (id: string) => {
-    console.log(`Télécharger ${activeTab} ${id}`);
+    Alert.alert('Téléchargement', `Téléchargement du ${activeTab} ${id} en cours...`);
   };
 
   const handleSendDocument = (id: string) => {
-    console.log(`Envoyer ${activeTab} ${id}`);
+    router.push(`/${activeTab}/${id}/send`);
   };
+
+  const getStatusIcon = (statut: string) => {
+    switch (statut) {
+      case 'accepte':
+      case 'payee':
+        return CheckCircle;
+      case 'en_retard':
+      case 'expire':
+        return AlertCircle;
+      default:
+        return Clock;
+    }
+  };
+
+  const getStatusColor = (statut: string) => {
+    switch (statut) {
+      case 'accepte':
+      case 'payee':
+        return '#16a34a';
+      case 'envoye':
+      case 'envoyee':
+        return '#2563eb';
+      case 'en_attente':
+        return '#eab308';
+      case 'en_retard':
+      case 'expire':
+        return '#dc2626';
+      case 'refuse':
+      case 'annulee':
+        return '#6b7280';
+      default:
+        return '#6b7280';
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <FileText size={48} color="#2563eb" />
+        <Text style={styles.loadingText}>Chargement des documents...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -115,6 +139,17 @@ export default function Devis() {
           <Plus size={20} color="#ffffff" />
         </TouchableOpacity>
       </View>
+
+      {/* Error Display */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <AlertCircle size={20} color="#dc2626" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadData}>
+            <Text style={styles.retryText}>Réessayer</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Tabs */}
       <View style={styles.tabsContainer}>
@@ -147,6 +182,11 @@ export default function Devis() {
             placeholder="Rechercher par client ou numéro..."
             placeholderTextColor="#9ca3af"
           />
+          {searchTerm.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchTerm('')}>
+              <Text style={styles.clearSearch}>✕</Text>
+            </TouchableOpacity>
+          )}
         </View>
         <TouchableOpacity style={styles.filterButton}>
           <Filter size={20} color="#6b7280" />
@@ -167,70 +207,107 @@ export default function Devis() {
                 : `Créez votre premier ${activeTab} en appuyant sur le bouton +`
               }
             </Text>
+            {!searchTerm && (
+              <TouchableOpacity style={styles.createFirstButton} onPress={handleCreateNew}>
+                <Text style={styles.createFirstText}>Créer mon premier {activeTab}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
-          filteredList.map((item) => (
-            <View key={item.id} style={styles.listItem}>
-              <View style={styles.itemHeader}>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemNumber}>{item.numero}</Text>
-                  <Text style={styles.itemClient}>{item.client}</Text>
-                </View>
-                <View style={styles.itemRight}>
-                  <Text style={styles.itemAmount}>{item.montant}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: item.statutColor }]}>
-                    <Text style={styles.statusText}>{item.statut}</Text>
+          filteredList.map((item) => {
+            const StatusIcon = getStatusIcon(item.statut);
+            const statusColor = getStatusColor(item.statut);
+            
+            return (
+              <TouchableOpacity 
+                key={item.id} 
+                style={styles.listItem}
+                onPress={() => handleViewDocument(item.id)}
+              >
+                <View style={styles.itemHeader}>
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemNumber}>{item.numero}</Text>
+                    <Text style={styles.itemClient}>
+                      {item.client?.nom || 'Client non défini'}
+                    </Text>
+                  </View>
+                  <View style={styles.itemRight}>
+                    <Text style={styles.itemAmount}>
+                      {item.montant_ttc?.toLocaleString('fr-FR')}€
+                    </Text>
+                    <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+                      <StatusIcon size={12} color="#ffffff" />
+                      <Text style={styles.statusText}>{item.statut}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-              
-              <View style={styles.itemDetails}>
-                <View style={styles.detailRow}>
-                  <Calendar size={14} color="#6b7280" />
-                  <Text style={styles.itemDate}>Émis le {item.date}</Text>
-                </View>
-                {activeTab === 'devis' && 'validite' in item && (
+                
+                <View style={styles.itemDetails}>
                   <View style={styles.detailRow}>
                     <Calendar size={14} color="#6b7280" />
-                    <Text style={styles.itemDate}>Valide jusqu'au {item.validite}</Text>
+                    <Text style={styles.itemDate}>
+                      Émis le {new Date(item.date_emission).toLocaleDateString('fr-FR')}
+                    </Text>
                   </View>
-                )}
-                {activeTab === 'factures' && 'echeance' in item && (
-                  <View style={styles.detailRow}>
-                    <Euro size={14} color="#6b7280" />
-                    <Text style={styles.itemDate}>Échéance: {item.echeance}</Text>
-                  </View>
-                )}
-              </View>
+                  {activeTab === 'devis' && item.date_validite && (
+                    <View style={styles.detailRow}>
+                      <Clock size={14} color="#6b7280" />
+                      <Text style={styles.itemDate}>
+                        Valide jusqu'au {new Date(item.date_validite).toLocaleDateString('fr-FR')}
+                      </Text>
+                    </View>
+                  )}
+                  {activeTab === 'factures' && item.date_echeance && (
+                    <View style={styles.detailRow}>
+                      <Euro size={14} color="#6b7280" />
+                      <Text style={styles.itemDate}>
+                        Échéance: {new Date(item.date_echeance).toLocaleDateString('fr-FR')}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
-              <View style={styles.itemActions}>
-                <TouchableOpacity 
-                  style={styles.actionButton}
-                  onPress={() => handleViewDocument(item.id)}
-                >
-                  <Eye size={16} color="#6b7280" />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.actionButton}
-                  onPress={() => handleEditDocument(item.id)}
-                >
-                  <Edit3 size={16} color="#6b7280" />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.actionButton}
-                  onPress={() => handleDownloadDocument(item.id)}
-                >
-                  <Download size={16} color="#6b7280" />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.actionButton}
-                  onPress={() => handleSendDocument(item.id)}
-                >
-                  <Send size={16} color="#6b7280" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
+                <View style={styles.itemActions}>
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleViewDocument(item.id);
+                    }}
+                  >
+                    <Eye size={16} color="#6b7280" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleEditDocument(item.id);
+                    }}
+                  >
+                    <Edit3 size={16} color="#6b7280" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleDownloadDocument(item.id);
+                    }}
+                  >
+                    <Download size={16} color="#6b7280" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleSendDocument(item.id);
+                    }}
+                  >
+                    <Send size={16} color="#6b7280" />
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            );
+          })
         )}
       </ScrollView>
 
@@ -245,8 +322,8 @@ export default function Devis() {
         <View style={styles.statItem}>
           <Text style={styles.statNumber}>
             {activeTab === 'devis' 
-              ? devisList.filter(d => d.statut === 'En attente').length
-              : facturesList.filter(f => f.statut === 'Envoyée').length
+              ? devisList.filter(d => d.statut === 'en_attente').length
+              : facturesList.filter(f => f.statut === 'envoyee').length
             }
           </Text>
           <Text style={styles.statLabel}>
@@ -256,8 +333,8 @@ export default function Devis() {
         <View style={styles.statItem}>
           <Text style={styles.statNumber}>
             {activeTab === 'devis' 
-              ? devisList.filter(d => d.statut === 'Accepté').length
-              : facturesList.filter(f => f.statut === 'Payée').length
+              ? devisList.filter(d => d.statut === 'accepte').length
+              : facturesList.filter(f => f.statut === 'payee').length
             }
           </Text>
           <Text style={styles.statLabel}>
@@ -273,6 +350,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9fafb',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 12,
   },
   header: {
     flexDirection: 'row',
@@ -299,6 +387,33 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+    margin: 16,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#dc2626',
+    marginLeft: 8,
+  },
+  retryButton: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  retryText: {
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: '500',
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -345,6 +460,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
   },
+  clearSearch: {
+    fontSize: 16,
+    color: '#9ca3af',
+    fontWeight: 'bold',
+  },
   filterButton: {
     backgroundColor: '#ffffff',
     width: 48,
@@ -374,6 +494,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 32,
+  },
+  createFirstButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 24,
+  },
+  createFirstText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
   listItem: {
     backgroundColor: '#ffffff',
@@ -415,9 +547,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    gap: 4,
   },
   statusText: {
     fontSize: 12,

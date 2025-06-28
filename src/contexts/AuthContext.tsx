@@ -9,7 +9,7 @@ interface AuthUser extends User {
     prenom?: string;
     entreprise?: string;
   };
-  name?: string; // Ajout pour compatibilité
+  name?: string;
 }
 
 interface AuthContextType {
@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Écouter les changements d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         if (session?.user) {
           await loadUserProfile(session.user);
         } else {
@@ -52,11 +53,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserProfile = async (authUser: User) => {
     try {
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('nom, prenom, entreprise')
         .eq('id', authUser.id)
         .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erreur lors du chargement du profil:', error);
+      }
 
       const userWithProfile: AuthUser = {
         ...authUser,
@@ -80,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       
-      // Vérification de la configuration Supabase avant la tentative de connexion
       if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
         throw new Error('Configuration Supabase manquante. Veuillez vérifier vos variables d\'environnement.');
       }
@@ -91,13 +95,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        // Messages d'erreur plus explicites
         if (error.message.includes('Invalid login credentials')) {
           throw new Error('Email ou mot de passe incorrect');
         } else if (error.message.includes('Email not confirmed')) {
           throw new Error('Veuillez confirmer votre email avant de vous connecter');
         } else if (error.message.includes('Failed to fetch')) {
-          throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion internet et la configuration Supabase.');
+          throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion internet.');
         } else {
           throw error;
         }
@@ -118,7 +121,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       
-      // Vérification de la configuration Supabase
       if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
         throw new Error('Configuration Supabase manquante. Veuillez vérifier vos variables d\'environnement.');
       }
@@ -132,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error.message.includes('User already registered')) {
           throw new Error('Un compte existe déjà avec cette adresse email');
         } else if (error.message.includes('Failed to fetch')) {
-          throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion internet et la configuration Supabase.');
+          throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion internet.');
         } else {
           throw error;
         }
@@ -148,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: data.user.email!,
             });
 
-          if (profileError) {
+          if (profileError && profileError.code !== '23505') { // Ignore duplicate key error
             console.error('Erreur création profil:', profileError);
           }
         } catch (profileError) {

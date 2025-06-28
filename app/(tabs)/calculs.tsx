@@ -8,7 +8,9 @@ import {
   Info,
   BarChart3,
   PieChart,
-  Target
+  Target,
+  AlertTriangle,
+  CheckCircle
 } from 'lucide-react-native';
 
 export default function Calculs() {
@@ -28,7 +30,7 @@ export default function Calculs() {
     liberal: 77700
   };
 
-  const ca = parseFloat(chiffreAffaires) || 0;
+  const ca = parseFloat(chiffreAffaires.replace(',', '.')) || 0;
   const charges = ca * tauxCharges[typeActivite];
   const revenuNet = ca - charges;
   const caAnnuel = ca * 12;
@@ -54,6 +56,18 @@ export default function Calculs() {
     return '#dc2626';
   };
 
+  const getSeuilIcon = () => {
+    if (seuilAtteint < 70) return CheckCircle;
+    if (seuilAtteint < 90) return AlertTriangle;
+    return AlertTriangle;
+  };
+
+  const validateInput = (text: string) => {
+    // Permettre seulement les chiffres, virgules et points
+    const cleanText = text.replace(/[^0-9.,]/g, '');
+    setChiffreAffaires(cleanText);
+  };
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
@@ -77,11 +91,14 @@ export default function Calculs() {
             <TextInput
               style={styles.input}
               value={chiffreAffaires}
-              onChangeText={setChiffreAffaires}
+              onChangeText={validateInput}
               placeholder="Ex: 3000"
               keyboardType="numeric"
             />
           </View>
+          <Text style={styles.helperText}>
+            Saisissez votre chiffre d'affaires mensuel estimé
+          </Text>
         </View>
 
         {/* Activity Type */}
@@ -97,18 +114,20 @@ export default function Calculs() {
                 ]}
                 onPress={() => setTypeActivite(key as any)}
               >
-                <Text style={[
-                  styles.activityButtonText,
-                  typeActivite === key && styles.activeActivityButtonText
-                ]}>
-                  {label}
-                </Text>
-                <Text style={[
-                  styles.activityRate,
-                  typeActivite === key && styles.activeActivityRate
-                ]}>
-                  {(tauxCharges[key as keyof typeof tauxCharges] * 100).toFixed(1)}%
-                </Text>
+                <View style={styles.activityButtonContent}>
+                  <Text style={[
+                    styles.activityButtonText,
+                    typeActivite === key && styles.activeActivityButtonText
+                  ]}>
+                    {label}
+                  </Text>
+                  <Text style={[
+                    styles.activityRate,
+                    typeActivite === key && styles.activeActivityRate
+                  ]}>
+                    {(tauxCharges[key as keyof typeof tauxCharges] * 100).toFixed(1)}%
+                  </Text>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -150,7 +169,7 @@ export default function Calculs() {
             {/* Seuil Progress */}
             <View style={styles.seuilSection}>
               <View style={styles.seuilHeader}>
-                <Target size={16} color={getSeuilColor()} />
+                {React.createElement(getSeuilIcon(), { size: 16, color: getSeuilColor() })}
                 <Text style={styles.seuilTitle}>Seuil de chiffre d'affaires</Text>
               </View>
               <View style={styles.progressBar}>
@@ -168,6 +187,11 @@ export default function Calculs() {
                 {caAnnuel.toLocaleString('fr-FR')} € / {seuilsCA[typeActivite].toLocaleString('fr-FR')} € 
                 ({seuilAtteint.toFixed(1)}%)
               </Text>
+              {seuilAtteint > 90 && (
+                <Text style={styles.seuilWarning}>
+                  ⚠️ Attention : Vous approchez du seuil limite !
+                </Text>
+              )}
             </View>
           </View>
         )}
@@ -209,6 +233,12 @@ export default function Calculs() {
               <Text style={styles.annualLabel}>Revenu net annuel</Text>
               <Text style={[styles.annualValue, { color: '#16a34a', fontSize: 20, fontWeight: 'bold' }]}>
                 {(revenuNet * 12).toLocaleString('fr-FR')} €
+              </Text>
+            </View>
+            <View style={styles.annualItem}>
+              <Text style={styles.annualLabel}>Taux de marge net</Text>
+              <Text style={styles.annualValue}>
+                {ca > 0 ? ((revenuNet / ca) * 100).toFixed(1) : '0'}%
               </Text>
             </View>
           </View>
@@ -334,13 +364,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
   },
+  helperText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+  },
   activityButtons: {
     gap: 8,
   },
   activityButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderRadius: 12,
@@ -351,6 +383,11 @@ const styles = StyleSheet.create({
   activeActivityButton: {
     borderColor: '#2563eb',
     backgroundColor: '#eff6ff',
+  },
+  activityButtonContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   activityButtonText: {
     fontSize: 14,
@@ -440,6 +477,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     textAlign: 'center',
+  },
+  seuilWarning: {
+    fontSize: 12,
+    color: '#dc2626',
+    textAlign: 'center',
+    marginTop: 4,
+    fontWeight: '500',
   },
   advancedButton: {
     flexDirection: 'row',

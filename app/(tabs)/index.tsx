@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { 
   FileText, 
@@ -11,14 +11,65 @@ import {
   ArrowRight,
   Calculator,
   Crown,
-  Globe
+  Globe,
+  AlertCircle,
+  Clock,
+  CheckCircle
 } from 'lucide-react-native';
+import { useAuth } from '../../src/contexts/AuthContext';
+import { dashboardService } from '../../src/services/database';
 
 export default function Dashboard() {
-  const stats = [
+  const { user } = useAuth();
+  const [stats, setStats] = useState({
+    clients: 0,
+    devis: 0,
+    factures: 0,
+    chiffreAffaires: 0
+  });
+  const [recentActivity, setRecentActivity] = useState({
+    devis: [],
+    factures: [],
+    clients: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [user]);
+
+  const loadDashboardData = async () => {
+    if (!user) return;
+    
+    try {
+      setError(null);
+      const [statsData, activityData] = await Promise.all([
+        dashboardService.getStats(user.id),
+        dashboardService.getRecentActivity(user.id)
+      ]);
+      
+      setStats(statsData);
+      setRecentActivity(activityData);
+    } catch (error) {
+      console.error('Erreur lors du chargement du dashboard:', error);
+      setError('Impossible de charger les données');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadDashboardData();
+  };
+
+  const statsCards = [
     {
       name: 'Clients',
-      value: '12',
+      value: stats.clients.toString(),
       icon: Users,
       color: '#2563eb',
       bgColor: '#eff6ff',
@@ -26,7 +77,7 @@ export default function Dashboard() {
     },
     {
       name: 'Devis',
-      value: '8',
+      value: stats.devis.toString(),
       icon: FileText,
       color: '#eab308',
       bgColor: '#fefce8',
@@ -34,7 +85,7 @@ export default function Dashboard() {
     },
     {
       name: 'CA Mensuel',
-      value: '3 450€',
+      value: `${stats.chiffreAffaires.toLocaleString('fr-FR')}€`,
       icon: Euro,
       color: '#16a34a',
       bgColor: '#f0fdf4',
@@ -97,12 +148,38 @@ export default function Dashboard() {
     router.push(route as any);
   };
 
+  const formatActivityDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return 'Hier';
+    if (diffDays < 7) return `Il y a ${diffDays} jours`;
+    return date.toLocaleDateString('fr-FR');
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <TrendingUp size={48} color="#2563eb" />
+        <Text style={styles.loadingText}>Chargement du tableau de bord...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={styles.container} 
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Bonjour ! 👋</Text>
+          <Text style={styles.greeting}>Bonjour {user?.name || 'Utilisateur'} ! 👋</Text>
           <Text style={styles.title}>Tableau de bord</Text>
         </View>
         <View style={styles.dateContainer}>
@@ -117,9 +194,20 @@ export default function Dashboard() {
         </View>
       </View>
 
+      {/* Error Display */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <AlertCircle size={20} color="#dc2626" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadDashboardData}>
+            <Text style={styles.retryText}>Réessayer</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
-        {stats.map((stat, index) => {
+        {statsCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
             <TouchableOpacity 
@@ -168,47 +256,75 @@ export default function Dashboard() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Activité récente</Text>
         <View style={styles.activityCard}>
-          <TouchableOpacity 
-            style={styles.activityItem}
-            onPress={() => router.push('/(tabs)/devis')}
-          >
-            <View style={styles.activityIcon}>
-              <FileText size={16} color="#2563eb" />
-            </View>
-            <View style={styles.activityContent}>
-              <Text style={styles.activityTitle}>Devis DEV-2024-001</Text>
-              <Text style={styles.activitySubtitle}>Client: Entreprise ABC</Text>
-            </View>
-            <Text style={styles.activityValue}>1 250€</Text>
-          </TouchableOpacity>
+          {recentActivity.devis.length > 0 && recentActivity.devis.map((devis: any) => (
+            <TouchableOpacity 
+              key={`devis-${devis.id}`}
+              style={styles.activityItem}
+              onPress={() => router.push(`/devis/${devis.id}`)}
+            >
+              <View style={styles.activityIcon}>
+                <FileText size={16} color="#2563eb" />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={styles.activityTitle}>Devis {devis.numero}</Text>
+                <Text style={styles.activitySubtitle}>
+                  Client: {devis.client?.nom || 'Non défini'}
+                </Text>
+              </View>
+              <Text style={styles.activityTime}>
+                {formatActivityDate(devis.created_at)}
+              </Text>
+            </TouchableOpacity>
+          ))}
           
-          <TouchableOpacity 
-            style={styles.activityItem}
-            onPress={() => router.push('/(tabs)/clients')}
-          >
-            <View style={styles.activityIcon}>
-              <Users size={16} color="#16a34a" />
+          {recentActivity.clients.length > 0 && recentActivity.clients.map((client: any) => (
+            <TouchableOpacity 
+              key={`client-${client.id}`}
+              style={styles.activityItem}
+              onPress={() => router.push(`/clients/${client.id}`)}
+            >
+              <View style={styles.activityIcon}>
+                <Users size={16} color="#16a34a" />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={styles.activityTitle}>Nouveau client</Text>
+                <Text style={styles.activitySubtitle}>{client.nom}</Text>
+              </View>
+              <Text style={styles.activityTime}>
+                {formatActivityDate(client.created_at)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+
+          {recentActivity.factures.length > 0 && recentActivity.factures.map((facture: any) => (
+            <TouchableOpacity 
+              key={`facture-${facture.id}`}
+              style={styles.activityItem}
+              onPress={() => router.push(`/factures/${facture.id}`)}
+            >
+              <View style={styles.activityIcon}>
+                <Euro size={16} color="#eab308" />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={styles.activityTitle}>Facture {facture.numero}</Text>
+                <Text style={styles.activitySubtitle}>
+                  Client: {facture.client?.nom || 'Non défini'}
+                </Text>
+              </View>
+              <Text style={styles.activityTime}>
+                {formatActivityDate(facture.created_at)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+
+          {recentActivity.devis.length === 0 && 
+           recentActivity.clients.length === 0 && 
+           recentActivity.factures.length === 0 && (
+            <View style={styles.noActivity}>
+              <Clock size={32} color="#d1d5db" />
+              <Text style={styles.noActivityText}>Aucune activité récente</Text>
             </View>
-            <View style={styles.activityContent}>
-              <Text style={styles.activityTitle}>Nouveau client</Text>
-              <Text style={styles.activitySubtitle}>Marie Dupont</Text>
-            </View>
-            <Text style={styles.activityTime}>Il y a 2h</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.activityItem}
-            onPress={() => router.push('/(tabs)/planning')}
-          >
-            <View style={styles.activityIcon}>
-              <Calendar size={16} color="#eab308" />
-            </View>
-            <View style={styles.activityContent}>
-              <Text style={styles.activityTitle}>RDV programmé</Text>
-              <Text style={styles.activitySubtitle}>Demain 14h00</Text>
-            </View>
-            <Text style={styles.activityTime}>Il y a 1h</Text>
-          </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -223,6 +339,10 @@ export default function Dashboard() {
             <TrendingUp size={48} color="#d1d5db" />
             <Text style={styles.chartText}>Graphique des revenus</Text>
             <Text style={styles.chartSubtext}>Évolution mensuelle</Text>
+            <View style={styles.chartButton}>
+              <Text style={styles.chartButtonText}>Voir les calculs</Text>
+              <ArrowRight size={16} color="#2563eb" />
+            </View>
           </View>
         </TouchableOpacity>
       </View>
@@ -234,6 +354,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9fafb',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 12,
   },
   header: {
     flexDirection: 'row',
@@ -265,6 +396,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginLeft: 6,
+    textTransform: 'capitalize',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+    margin: 16,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#dc2626',
+    marginLeft: 8,
+  },
+  retryButton: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  retryText: {
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: '500',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -377,14 +536,18 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 2,
   },
-  activityValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#16a34a',
-  },
   activityTime: {
     fontSize: 12,
     color: '#6b7280',
+  },
+  noActivity: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  noActivityText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 8,
   },
   chartCard: {
     backgroundColor: '#ffffff',
@@ -410,5 +573,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9ca3af',
     marginTop: 4,
+  },
+  chartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  chartButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#2563eb',
+    marginRight: 6,
   },
 });

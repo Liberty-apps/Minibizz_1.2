@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { 
   Users, 
@@ -10,83 +10,117 @@ import {
   MapPin,
   Building,
   User,
-  Filter
+  Filter,
+  AlertCircle,
+  Edit3,
+  Trash2
 } from 'lucide-react-native';
+import { useAuth } from '../../src/contexts/AuthContext';
+import { clientsService } from '../../src/services/database';
 
 export default function Clients() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [clientsList, setClientsList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<'all' | 'particulier' | 'entreprise'>('all');
 
-  const clientsList = [
-    {
-      id: '1',
-      nom: 'Entreprise ABC',
-      prenom: '',
-      email: 'contact@abc.com',
-      telephone: '01 23 45 67 89',
-      adresse: 'Paris, France',
-      siret: '12345678901234',
-      type: 'entreprise',
-      avatar: 'EA'
-    },
-    {
-      id: '2',
-      nom: 'Dupont',
-      prenom: 'Marie',
-      email: 'marie.dupont@email.com',
-      telephone: '06 12 34 56 78',
-      adresse: 'Lyon, France',
-      siret: '',
-      type: 'particulier',
-      avatar: 'MD'
-    },
-    {
-      id: '3',
-      nom: 'Tech Solutions',
-      prenom: '',
-      email: 'hello@techsolutions.fr',
-      telephone: '04 56 78 90 12',
-      adresse: 'Marseille, France',
-      siret: '98765432109876',
-      type: 'entreprise',
-      avatar: 'TS'
-    },
-    {
-      id: '4',
-      nom: 'Martin',
-      prenom: 'Jean',
-      email: 'jean.martin@gmail.com',
-      telephone: '02 34 56 78 90',
-      adresse: 'Nantes, France',
-      siret: '',
-      type: 'particulier',
-      avatar: 'JM'
+  useEffect(() => {
+    loadClients();
+  }, [user]);
+
+  const loadClients = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await clientsService.getAll(user.id);
+      setClientsList(data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des clients:', error);
+      setError('Impossible de charger les clients');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const filteredClients = clientsList.filter(client =>
-    client.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredClients = clientsList.filter(client => {
+    const matchesSearch = 
+      client.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client.prenom && client.prenom.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (client.entreprise && client.entreprise.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesFilter = filterType === 'all' || client.type_client === filterType;
+    
+    return matchesSearch && matchesFilter;
+  });
 
   const handleAddClient = () => {
-    console.log('Ajouter un nouveau client');
+    router.push('/clients/create');
   };
 
   const handleClientPress = (clientId: string) => {
-    console.log('Voir client:', clientId);
+    router.push(`/clients/${clientId}`);
+  };
+
+  const handleEditClient = (clientId: string) => {
+    router.push(`/clients/${clientId}/edit`);
+  };
+
+  const handleDeleteClient = (clientId: string, clientName: string) => {
+    Alert.alert(
+      'Confirmer la suppression',
+      `Êtes-vous sûr de vouloir supprimer le client "${clientName}" ?\n\nCette action est irréversible.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clientsService.delete(clientId);
+              Alert.alert('Succès', 'Client supprimé avec succès');
+              loadClients();
+            } catch (error) {
+              Alert.alert('Erreur', 'Impossible de supprimer le client');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const getClientDisplayName = (client: any) => {
-    if (client.type === 'entreprise') {
-      return client.nom;
+    if (client.type_client === 'entreprise') {
+      return client.entreprise || client.nom;
     }
-    return `${client.prenom} ${client.nom}`.trim();
+    return `${client.prenom || ''} ${client.nom}`.trim();
   };
 
   const getClientTypeIcon = (type: string) => {
     return type === 'entreprise' ? Building : User;
   };
+
+  const getClientAvatar = (client: any) => {
+    if (client.type_client === 'entreprise') {
+      return (client.entreprise || client.nom).substring(0, 2).toUpperCase();
+    }
+    const prenom = client.prenom || '';
+    const nom = client.nom || '';
+    return `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase();
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Users size={48} color="#2563eb" />
+        <Text style={styles.loadingText}>Chargement des clients...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -103,6 +137,17 @@ export default function Clients() {
         </TouchableOpacity>
       </View>
 
+      {/* Error Display */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <AlertCircle size={20} color="#dc2626" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadClients}>
+            <Text style={styles.retryText}>Réessayer</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Search and Filter */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
@@ -114,9 +159,42 @@ export default function Clients() {
             placeholder="Rechercher un client..."
             placeholderTextColor="#9ca3af"
           />
+          {searchTerm.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchTerm('')}>
+              <Text style={styles.clearSearch}>✕</Text>
+            </TouchableOpacity>
+          )}
         </View>
         <TouchableOpacity style={styles.filterButton}>
           <Filter size={20} color="#6b7280" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Filter Tabs */}
+      <View style={styles.filterTabs}>
+        <TouchableOpacity 
+          style={[styles.filterTab, filterType === 'all' && styles.activeFilterTab]}
+          onPress={() => setFilterType('all')}
+        >
+          <Text style={[styles.filterTabText, filterType === 'all' && styles.activeFilterTabText]}>
+            Tous ({clientsList.length})
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.filterTab, filterType === 'particulier' && styles.activeFilterTab]}
+          onPress={() => setFilterType('particulier')}
+        >
+          <Text style={[styles.filterTabText, filterType === 'particulier' && styles.activeFilterTabText]}>
+            Particuliers ({clientsList.filter(c => c.type_client === 'particulier').length})
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.filterTab, filterType === 'entreprise' && styles.activeFilterTab]}
+          onPress={() => setFilterType('entreprise')}
+        >
+          <Text style={[styles.filterTabText, filterType === 'entreprise' && styles.activeFilterTabText]}>
+            Entreprises ({clientsList.filter(c => c.type_client === 'entreprise').length})
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -134,10 +212,15 @@ export default function Clients() {
                 : 'Ajoutez votre premier client en appuyant sur le bouton +'
               }
             </Text>
+            {!searchTerm && (
+              <TouchableOpacity style={styles.createFirstButton} onPress={handleAddClient}>
+                <Text style={styles.createFirstText}>Ajouter mon premier client</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           filteredClients.map((client) => {
-            const TypeIcon = getClientTypeIcon(client.type);
+            const TypeIcon = getClientTypeIcon(client.type_client);
             return (
               <TouchableOpacity 
                 key={client.id} 
@@ -147,7 +230,7 @@ export default function Clients() {
                 <View style={styles.clientHeader}>
                   <View style={styles.avatarContainer}>
                     <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{client.avatar}</Text>
+                      <Text style={styles.avatarText}>{getClientAvatar(client)}</Text>
                     </View>
                     <View style={styles.typeIndicator}>
                       <TypeIcon size={12} color="#6b7280" />
@@ -173,10 +256,12 @@ export default function Clients() {
                       </View>
                     )}
                     
-                    {client.adresse && (
+                    {(client.ville || client.adresse) && (
                       <View style={styles.contactInfo}>
                         <MapPin size={14} color="#6b7280" />
-                        <Text style={styles.contactText}>{client.adresse}</Text>
+                        <Text style={styles.contactText}>
+                          {client.ville || client.adresse}
+                        </Text>
                       </View>
                     )}
                     
@@ -186,6 +271,27 @@ export default function Clients() {
                         <Text style={styles.contactText}>SIRET: {client.siret}</Text>
                       </View>
                     )}
+                  </View>
+
+                  <View style={styles.clientActions}>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleEditClient(client.id);
+                      }}
+                    >
+                      <Edit3 size={16} color="#6b7280" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClient(client.id, getClientDisplayName(client));
+                      }}
+                    >
+                      <Trash2 size={16} color="#dc2626" />
+                    </TouchableOpacity>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -198,13 +304,13 @@ export default function Clients() {
       <View style={styles.statsFooter}>
         <View style={styles.statItem}>
           <Text style={styles.statNumber}>
-            {clientsList.filter(c => c.type === 'particulier').length}
+            {clientsList.filter(c => c.type_client === 'particulier').length}
           </Text>
           <Text style={styles.statLabel}>Particuliers</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={styles.statNumber}>
-            {clientsList.filter(c => c.type === 'entreprise').length}
+            {clientsList.filter(c => c.type_client === 'entreprise').length}
           </Text>
           <Text style={styles.statLabel}>Entreprises</Text>
         </View>
@@ -221,6 +327,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9fafb',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 12,
   },
   header: {
     flexDirection: 'row',
@@ -248,6 +365,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+    margin: 16,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#dc2626',
+    marginLeft: 8,
+  },
+  retryButton: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  retryText: {
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: '500',
+  },
   searchContainer: {
     flexDirection: 'row',
     padding: 16,
@@ -268,6 +412,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
   },
+  clearSearch: {
+    fontSize: 16,
+    color: '#9ca3af',
+    fontWeight: 'bold',
+  },
   filterButton: {
     backgroundColor: '#ffffff',
     width: 48,
@@ -275,6 +424,36 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  filterTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    marginHorizontal: 16,
+    borderRadius: 12,
+    padding: 4,
+  },
+  filterTab: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  activeFilterTab: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  filterTabText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  activeFilterTabText: {
+    color: '#111827',
   },
   listContainer: {
     flex: 1,
@@ -297,6 +476,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 32,
+  },
+  createFirstButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 24,
+  },
+  createFirstText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
   clientCard: {
     backgroundColor: '#ffffff',
@@ -359,6 +550,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     flex: 1,
+  },
+  clientActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statsFooter: {
     flexDirection: 'row',
