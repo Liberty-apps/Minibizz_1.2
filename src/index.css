@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import Leaflet CSS */
+@import 'leaflet/dist/leaflet.css';
+
 /* Styles pour les appareils mobiles avec notch */
 body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
@@ -17,4 +20,15 @@ body {
 /* Styles pour éviter le zoom sur les inputs sur iOS */
 input, select, textarea {
   font-size: 16px;
+}
+
+/* Styles pour la carte */
+.leaflet-container {
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Fix pour les icônes Leaflet */
+.leaflet-default-icon-path {
+  background-image: url('https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png');
 }
