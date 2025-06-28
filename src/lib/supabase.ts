@@ -332,6 +332,265 @@ export interface Database {
           niveau_experience?: string;
         };
       };
+      plans: {
+        Row: {
+          id: string;
+          nom: string;
+          prix_mensuel: number;
+          prix_annuel: number;
+          description: string | null;
+          fonctionnalites: any;
+          limites: any;
+          couleur: string | null;
+          ordre: number | null;
+          actif: boolean | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          nom: string;
+          prix_mensuel?: number;
+          prix_annuel?: number;
+          description?: string | null;
+          fonctionnalites?: any;
+          limites?: any;
+          couleur?: string | null;
+          ordre?: number | null;
+          actif?: boolean | null;
+        };
+        Update: {
+          nom?: string;
+          prix_mensuel?: number;
+          prix_annuel?: number;
+          description?: string | null;
+          fonctionnalites?: any;
+          limites?: any;
+          couleur?: string | null;
+          ordre?: number | null;
+          actif?: boolean | null;
+        };
+      };
+      abonnements: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan_id: string;
+          statut: string;
+          type_facturation: string;
+          date_debut: string;
+          date_fin: string | null;
+          date_prochaine_facturation: string | null;
+          montant_paye: number;
+          stripe_subscription_id: string | null;
+          stripe_customer_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          plan_id: string;
+          statut?: string;
+          type_facturation?: string;
+          date_debut?: string;
+          date_fin?: string | null;
+          date_prochaine_facturation?: string | null;
+          montant_paye?: number;
+          stripe_subscription_id?: string | null;
+          stripe_customer_id?: string | null;
+        };
+        Update: {
+          plan_id?: string;
+          statut?: string;
+          type_facturation?: string;
+          date_debut?: string;
+          date_fin?: string | null;
+          date_prochaine_facturation?: string | null;
+          montant_paye?: number;
+          stripe_subscription_id?: string | null;
+          stripe_customer_id?: string | null;
+        };
+      };
+      sites_vitrines: {
+        Row: {
+          id: string;
+          user_id: string;
+          nom: string;
+          sous_domaine: string | null;
+          domaine_personnalise: string | null;
+          template_id: string | null;
+          configuration: any;
+          contenu: any;
+          styles: any;
+          statut: string;
+          ssl_actif: boolean | null;
+          analytics_actif: boolean | null;
+          seo_config: any | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          nom: string;
+          sous_domaine?: string | null;
+          domaine_personnalise?: string | null;
+          template_id?: string | null;
+          configuration?: any;
+          contenu?: any;
+          styles?: any;
+          statut?: string;
+          ssl_actif?: boolean | null;
+          analytics_actif?: boolean | null;
+          seo_config?: any | null;
+        };
+        Update: {
+          nom?: string;
+          sous_domaine?: string | null;
+          domaine_personnalise?: string | null;
+          template_id?: string | null;
+          configuration?: any;
+          contenu?: any;
+          styles?: any;
+          statut?: string;
+          ssl_actif?: boolean | null;
+          analytics_actif?: boolean | null;
+          seo_config?: any | null;
+        };
+      };
+      templates_sites: {
+        Row: {
+          id: string;
+          nom: string;
+          description: string | null;
+          type_template: string;
+          structure: any;
+          styles_defaut: any;
+          preview_url: string | null;
+          actif: boolean | null;
+          created_at: string;
+        };
+        Insert: {
+          nom: string;
+          description?: string | null;
+          type_template?: string;
+          structure?: any;
+          styles_defaut?: any;
+          preview_url?: string | null;
+          actif?: boolean | null;
+        };
+        Update: {
+          nom?: string;
+          description?: string | null;
+          type_template?: string;
+          structure?: any;
+          styles_defaut?: any;
+          preview_url?: string | null;
+          actif?: boolean | null;
+        };
+      };
+      pages_sites: {
+        Row: {
+          id: string;
+          site_id: string;
+          nom: string;
+          slug: string;
+          titre: string | null;
+          contenu: any;
+          meta_description: string | null;
+          meta_keywords: string | null;
+          ordre: number | null;
+          visible: boolean | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          site_id: string;
+          nom: string;
+          slug: string;
+          titre?: string | null;
+          contenu?: any;
+          meta_description?: string | null;
+          meta_keywords?: string | null;
+          ordre?: number | null;
+          visible?: boolean | null;
+        };
+        Update: {
+          nom?: string;
+          slug?: string;
+          titre?: string | null;
+          contenu?: any;
+          meta_description?: string | null;
+          meta_keywords?: string | null;
+          ordre?: number | null;
+          visible?: boolean | null;
+        };
+      };
+      limites_utilisation: {
+        Row: {
+          id: string;
+          user_id: string;
+          periode_debut: string;
+          periode_fin: string;
+          documents_crees: number | null;
+          clients_exportes: number | null;
+          requetes_ia: number | null;
+          sites_crees: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          periode_debut?: string;
+          periode_fin?: string;
+          documents_crees?: number | null;
+          clients_exportes?: number | null;
+          requetes_ia?: number | null;
+          sites_crees?: number | null;
+        };
+        Update: {
+          periode_debut?: string;
+          periode_fin?: string;
+          documents_crees?: number | null;
+          clients_exportes?: number | null;
+          requetes_ia?: number | null;
+          sites_crees?: number | null;
+        };
+      };
+      historique_paiements: {
+        Row: {
+          id: string;
+          user_id: string;
+          abonnement_id: string | null;
+          montant: number;
+          devise: string | null;
+          statut: string;
+          stripe_payment_intent_id: string | null;
+          stripe_invoice_id: string | null;
+          date_paiement: string | null;
+          methode_paiement: string | null;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          abonnement_id?: string | null;
+          montant: number;
+          devise?: string | null;
+          statut?: string;
+          stripe_payment_intent_id?: string | null;
+          stripe_invoice_id?: string | null;
+          date_paiement?: string | null;
+          methode_paiement?: string | null;
+        };
+        Update: {
+          abonnement_id?: string | null;
+          montant?: number;
+          devise?: string | null;
+          statut?: string;
+          stripe_payment_intent_id?: string | null;
+          stripe_invoice_id?: string | null;
+          date_paiement?: string | null;
+          methode_paiement?: string | null;
+        };
+      };
     };
   };
 }

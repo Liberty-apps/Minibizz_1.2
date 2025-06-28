@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { LayoutDashboard, FileText, Users, Calendar, Settings, Calculator, CircleHelp as HelpCircle } from 'lucide-react-native';
+import { LayoutDashboard, FileText, Users, Calendar, Settings, Calculator, CircleHelp as HelpCircle, Crown, Globe } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -62,6 +62,24 @@ export default function TabLayout() {
           title: 'Calculs',
           tabBarIcon: ({ size, color }) => (
             <Calculator size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="abonnement"
+        options={{
+          title: 'Abonnement',
+          tabBarIcon: ({ size, color }) => (
+            <Crown size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="sites-vitrines"
+        options={{
+          title: 'Sites',
+          tabBarIcon: ({ size, color }) => (
+            <Globe size={size} color={color} />
           ),
         }}
       />
