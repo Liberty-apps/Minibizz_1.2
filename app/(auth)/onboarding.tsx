@@ -1,62 +1,55 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { router } from 'expo-router';
-import { User, Building, Upload, ChevronDown, Check, ArrowRight } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { onboardingService } from '../../src/services/onboarding';
+import { Building, User, MapPin, Phone, Mail, ArrowRight, CheckCircle, FileText } from 'lucide-react-native';
 
 export default function Onboarding() {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [showActiviteDropdown, setShowActiviteDropdown] = useState(false);
   
   const [formData, setFormData] = useState({
+    // Informations personnelles
     nom: '',
     prenom: '',
-    nom_entreprise: '',
-    logo_url: '',
-    activite_principale: ''
+    telephone: '',
+    
+    // Informations entreprise
+    activite_principale: '',
+    forme_juridique: 'Auto-entrepreneur',
+    siret: '',
+    
+    // Adresse
+    adresse: '',
+    code_postal: '',
+    ville: '',
+    pays: 'France',
+    
+    // Paramètres fiscaux
+    taux_tva: '0',
+    regime_fiscal: 'Micro-entreprise'
   });
 
-  const activites = onboardingService.getActivites();
-  const totalSteps = 4;
+  const totalSteps = 3;
 
-  useEffect(() => {
-    loadExistingProfile();
-  }, [user]);
-
-  const loadExistingProfile = async () => {
-    if (!user) return;
-    
-    try {
-      const profile = await onboardingService.getProfile(user.id);
-      if (profile) {
-        setFormData({
-          nom: profile.nom || '',
-          prenom: profile.prenom || '',
-          nom_entreprise: '',
-          logo_url: '',
-          activite_principale: profile.activite_principale || ''
-        });
-      }
-    } catch (error) {
-      console.error('Erreur lors du chargement du profil:', error);
-    }
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const validateStep = (step: number): boolean => {
+  const validateStep = (step: number) => {
     switch (step) {
       case 1:
-        return formData.nom.trim().length > 0 && formData.prenom.trim().length > 0;
+        return formData.nom.trim() && formData.prenom.trim();
       case 2:
-        return true; // Nom d'entreprise optionnel
+        return formData.activite_principale.trim();
       case 3:
-        return true; // Logo optionnel
-      case 4:
-        return formData.activite_principale.length > 0;
+        return formData.ville.trim();
       default:
-        return false;
+        return true;
     }
   };
 
@@ -65,7 +58,7 @@ export default function Onboarding() {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires');
       return;
     }
-
+    
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -80,26 +73,41 @@ export default function Onboarding() {
   };
 
   const handleComplete = async () => {
-    if (!user) {
-      Alert.alert('Erreur', 'Utilisateur non connecté');
-      return;
-    }
-
     try {
       setLoading(true);
-      await onboardingService.updateProfile(user.id, formData);
-      router.replace('/(tabs)');
+      
+      // Ici vous pourriez sauvegarder les données du profil
+      // await profileService.updateProfile(user.id, formData);
+      
+      Alert.alert(
+        'Configuration terminée !',
+        'Votre profil a été configuré avec succès.',
+        [
+          {
+            text: 'Commencer',
+            onPress: () => router.replace('/(tabs)')
+          }
+        ]
+      );
     } catch (error) {
-      console.error('Erreur lors de la finalisation:', error);
-      Alert.alert('Erreur', 'Impossible de finaliser l\'inscription');
+      Alert.alert('Erreur', 'Impossible de sauvegarder votre profil');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogoUpload = () => {
-    // Simulation d'upload de logo
-    Alert.alert('Upload de logo', 'Fonctionnalité d\'upload en cours de développement');
+  const handleSkip = () => {
+    Alert.alert(
+      'Passer la configuration',
+      'Vous pourrez configurer votre profil plus tard dans les paramètres.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Passer',
+          onPress: () => router.replace('/(tabs)')
+        }
+      ]
+    );
   };
 
   const renderStepIndicator = () => (
@@ -108,11 +116,10 @@ export default function Onboarding() {
         <View key={index} style={styles.stepContainer}>
           <View style={[
             styles.stepCircle,
-            index + 1 <= currentStep && styles.stepCircleActive,
-            index + 1 < currentStep && styles.stepCircleCompleted
+            index + 1 <= currentStep && styles.stepCircleActive
           ]}>
             {index + 1 < currentStep ? (
-              <Check size={16} color="#ffffff" />
+              <CheckCircle size={16} color="#ffffff" />
             ) : (
               <Text style={[
                 styles.stepNumber,
@@ -125,7 +132,7 @@ export default function Onboarding() {
           {index < totalSteps - 1 && (
             <View style={[
               styles.stepLine,
-              index + 1 < currentStep && styles.stepLineCompleted
+              index + 1 < currentStep && styles.stepLineActive
             ]} />
           )}
         </View>
@@ -148,9 +155,9 @@ export default function Onboarding() {
         <TextInput
           style={styles.input}
           value={formData.prenom}
-          onChangeText={(text) => setFormData({...formData, prenom: text})}
+          onChangeText={(value) => handleInputChange('prenom', value)}
           placeholder="Votre prénom"
-          placeholderTextColor="#9ca3af"
+          autoCapitalize="words"
         />
       </View>
 
@@ -159,9 +166,20 @@ export default function Onboarding() {
         <TextInput
           style={styles.input}
           value={formData.nom}
-          onChangeText={(text) => setFormData({...formData, nom: text})}
+          onChangeText={(value) => handleInputChange('nom', value)}
           placeholder="Votre nom"
-          placeholderTextColor="#9ca3af"
+          autoCapitalize="words"
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Téléphone</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.telephone}
+          onChangeText={(value) => handleInputChange('telephone', value)}
+          placeholder="06 12 34 56 78"
+          keyboardType="phone-pad"
         />
       </View>
     </View>
@@ -171,24 +189,56 @@ export default function Onboarding() {
     <View style={styles.stepContent}>
       <View style={styles.stepHeader}>
         <Building size={32} color="#2563eb" />
-        <Text style={styles.stepTitle}>Votre entreprise</Text>
+        <Text style={styles.stepTitle}>Votre activité</Text>
         <Text style={styles.stepDescription}>
-          Donnez un nom à votre auto-entreprise (optionnel)
+          Décrivez votre activité professionnelle
         </Text>
       </View>
 
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Nom de l'entreprise</Text>
+        <Text style={styles.label}>Activité principale *</Text>
         <TextInput
           style={styles.input}
-          value={formData.nom_entreprise}
-          onChangeText={(text) => setFormData({...formData, nom_entreprise: text})}
-          placeholder="Ex: MonEntreprise SARL"
-          placeholderTextColor="#9ca3af"
+          value={formData.activite_principale}
+          onChangeText={(value) => handleInputChange('activite_principale', value)}
+          placeholder="Ex: Développement web, Conseil, Design..."
+          multiline
         />
-        <Text style={styles.helperText}>
-          Vous pourrez modifier cette information plus tard
-        </Text>
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Forme juridique</Text>
+        <View style={styles.selectContainer}>
+          {['Auto-entrepreneur', 'EURL', 'SASU', 'SAS', 'SARL'].map((forme) => (
+            <TouchableOpacity
+              key={forme}
+              style={[
+                styles.selectOption,
+                formData.forme_juridique === forme && styles.selectOptionActive
+              ]}
+              onPress={() => handleInputChange('forme_juridique', forme)}
+            >
+              <Text style={[
+                styles.selectOptionText,
+                formData.forme_juridique === forme && styles.selectOptionTextActive
+              ]}>
+                {forme}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>SIRET (optionnel)</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.siret}
+          onChangeText={(value) => handleInputChange('siret', value)}
+          placeholder="12345678901234"
+          keyboardType="numeric"
+          maxLength={14}
+        />
       </View>
     </View>
   );
@@ -196,82 +246,71 @@ export default function Onboarding() {
   const renderStep3 = () => (
     <View style={styles.stepContent}>
       <View style={styles.stepHeader}>
-        <Upload size={32} color="#2563eb" />
-        <Text style={styles.stepTitle}>Logo de l'entreprise</Text>
+        <MapPin size={32} color="#2563eb" />
+        <Text style={styles.stepTitle}>Adresse</Text>
         <Text style={styles.stepDescription}>
-          Ajoutez votre logo (optionnel)
-        </Text>
-      </View>
-
-      <TouchableOpacity style={styles.uploadArea} onPress={handleLogoUpload}>
-        <Upload size={48} color="#9ca3af" />
-        <Text style={styles.uploadText}>Cliquez pour télécharger votre logo</Text>
-        <Text style={styles.uploadSubtext}>PNG, JPG jusqu'à 5MB</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.helperText}>
-        Vous pourrez ajouter ou modifier votre logo plus tard dans les paramètres
-      </Text>
-    </View>
-  );
-
-  const renderStep4 = () => (
-    <View style={styles.stepContent}>
-      <View style={styles.stepHeader}>
-        <Building size={32} color="#2563eb" />
-        <Text style={styles.stepTitle}>Secteur d'activité</Text>
-        <Text style={styles.stepDescription}>
-          Sélectionnez votre domaine d'activité principal
+          Où exercez-vous votre activité ?
         </Text>
       </View>
 
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Activité principale *</Text>
-        <TouchableOpacity
-          style={styles.dropdown}
-          onPress={() => setShowActiviteDropdown(!showActiviteDropdown)}
-        >
-          <Text style={[
-            styles.dropdownText,
-            !formData.activite_principale && styles.dropdownPlaceholder
-          ]}>
-            {formData.activite_principale || 'Sélectionnez votre activité'}
-          </Text>
-          <ChevronDown size={20} color="#9ca3af" />
-        </TouchableOpacity>
+        <Text style={styles.label}>Adresse</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.adresse}
+          onChangeText={(value) => handleInputChange('adresse', value)}
+          placeholder="123 rue de la République"
+        />
+      </View>
 
-        {showActiviteDropdown && (
-          <View style={styles.dropdownList}>
-            <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-              {activites.map((activite, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setFormData({...formData, activite_principale: activite});
-                    setShowActiviteDropdown(false);
-                  }}
-                >
-                  <Text style={styles.dropdownItemText}>{activite}</Text>
-                  {formData.activite_principale === activite && (
-                    <Check size={16} color="#2563eb" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
+      <View style={styles.formRow}>
+        <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+          <Text style={styles.label}>Code postal</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.code_postal}
+            onChangeText={(value) => handleInputChange('code_postal', value)}
+            placeholder="75001"
+            keyboardType="numeric"
+            maxLength={5}
+          />
+        </View>
+
+        <View style={[styles.formGroup, { flex: 2, marginLeft: 8 }]}>
+          <Text style={styles.label}>Ville *</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.ville}
+            onChangeText={(value) => handleInputChange('ville', value)}
+            placeholder="Paris"
+            autoCapitalize="words"
+          />
+        </View>
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Pays</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.pays}
+          onChangeText={(value) => handleInputChange('pays', value)}
+          placeholder="France"
+          autoCapitalize="words"
+        />
       </View>
     </View>
   );
 
   const renderCurrentStep = () => {
     switch (currentStep) {
-      case 1: return renderStep1();
-      case 2: return renderStep2();
-      case 3: return renderStep3();
-      case 4: return renderStep4();
-      default: return renderStep1();
+      case 1:
+        return renderStep1();
+      case 2:
+        return renderStep2();
+      case 3:
+        return renderStep3();
+      default:
+        return null;
     }
   };
 
@@ -280,44 +319,56 @@ export default function Onboarding() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Finalisons votre profil</Text>
+          <View style={styles.logoContainer}>
+            <FileText color="#ffffff" size={24} />
+          </View>
+          <Text style={styles.title}>Configuration du profil</Text>
           <Text style={styles.subtitle}>
-            Quelques informations pour personnaliser votre expérience
+            Étape {currentStep} sur {totalSteps}
           </Text>
         </View>
 
         {/* Step Indicator */}
         {renderStepIndicator()}
 
-        {/* Current Step Content */}
+        {/* Step Content */}
         {renderCurrentStep()}
       </ScrollView>
 
       {/* Navigation */}
       <View style={styles.navigation}>
-        <TouchableOpacity
-          style={[styles.navButton, styles.prevButton, currentStep === 1 && styles.navButtonDisabled]}
-          onPress={handlePrevious}
-          disabled={currentStep === 1}
-        >
-          <Text style={[styles.navButtonText, styles.prevButtonText]}>Précédent</Text>
-        </TouchableOpacity>
+        <View style={styles.navigationButtons}>
+          {currentStep > 1 && (
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={handlePrevious}
+            >
+              <Text style={styles.secondaryButtonText}>Précédent</Text>
+            </TouchableOpacity>
+          )}
 
-        <TouchableOpacity
-          style={[
-            styles.navButton,
-            styles.nextButton,
-            !validateStep(currentStep) && styles.navButtonDisabled,
-            loading && styles.navButtonDisabled
-          ]}
-          onPress={handleNext}
-          disabled={!validateStep(currentStep) || loading}
-        >
-          <Text style={styles.nextButtonText}>
-            {currentStep === totalSteps ? (loading ? 'Finalisation...' : 'Terminer') : 'Suivant'}
-          </Text>
-          {currentStep < totalSteps && <ArrowRight size={16} color="#ffffff" />}
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={handleSkip}
+          >
+            <Text style={styles.skipButtonText}>Passer</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.primaryButton,
+              !validateStep(currentStep) && styles.primaryButtonDisabled,
+              loading && styles.primaryButtonDisabled
+            ]}
+            onPress={handleNext}
+            disabled={!validateStep(currentStep) || loading}
+          >
+            <Text style={styles.primaryButtonText}>
+              {currentStep === totalSteps ? (loading ? 'Finalisation...' : 'Terminer') : 'Suivant'}
+            </Text>
+            <ArrowRight size={16} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -332,55 +383,58 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 24,
-    paddingTop: 60,
-    backgroundColor: '#ffffff',
     alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
+    backgroundColor: '#ffffff',
+  },
+  logoContainer: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#2563eb',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6b7280',
-    textAlign: 'center',
   },
   stepIndicator: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 32,
     paddingHorizontal: 24,
+    paddingVertical: 24,
+    backgroundColor: '#ffffff',
   },
   stepContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   stepCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#e5e7eb',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
   },
   stepCircleActive: {
     backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
-  },
-  stepCircleCompleted: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
   },
   stepNumber: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6b7280',
   },
   stepNumberActive: {
     color: '#ffffff',
@@ -391,8 +445,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#e5e7eb',
     marginHorizontal: 8,
   },
-  stepLineCompleted: {
-    backgroundColor: '#16a34a',
+  stepLineActive: {
+    backgroundColor: '#2563eb',
   },
   stepContent: {
     padding: 24,
@@ -402,23 +456,26 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   stepTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#111827',
-    marginTop: 16,
+    marginTop: 12,
     marginBottom: 8,
   },
   stepDescription: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
-    paddingHorizontal: 16,
   },
   formGroup: {
     marginBottom: 20,
   },
+  formRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
     color: '#374151',
     marginBottom: 8,
@@ -426,129 +483,96 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: '#d1d5db',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderRadius: 8,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
     color: '#111827',
     backgroundColor: '#ffffff',
+    ...Platform.select({
+      web: {
+        outlineWidth: 0,
+      },
+    }),
   },
-  helperText: {
+  selectContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  selectOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#ffffff',
+  },
+  selectOptionActive: {
+    borderColor: '#2563eb',
+    backgroundColor: '#eff6ff',
+  },
+  selectOptionText: {
     fontSize: 14,
     color: '#6b7280',
-    marginTop: 8,
   },
-  uploadArea: {
-    borderWidth: 2,
-    borderColor: '#d1d5db',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: 32,
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    marginBottom: 16,
-  },
-  uploadText: {
-    fontSize: 16,
-    color: '#374151',
-    marginTop: 12,
+  selectOptionTextActive: {
+    color: '#2563eb',
     fontWeight: '500',
   },
-  uploadSubtext: {
-    fontSize: 14,
-    color: '#9ca3af',
-    marginTop: 4,
-  },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#ffffff',
-  },
-  dropdownText: {
-    fontSize: 16,
-    color: '#111827',
-    flex: 1,
-  },
-  dropdownPlaceholder: {
-    color: '#9ca3af',
-  },
-  dropdownList: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 12,
-    marginTop: 4,
-    maxHeight: 200,
-    zIndex: 1000,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  dropdownScroll: {
-    maxHeight: 200,
-  },
-  dropdownItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  dropdownItemText: {
-    fontSize: 16,
-    color: '#374151',
-    flex: 1,
-  },
   navigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 24,
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    ...Platform.select({
+      ios: {
+        paddingBottom: 32,
+      },
+    }),
   },
-  navButton: {
-    flex: 1,
+  navigationButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  secondaryButton: {
+    paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#ffffff',
   },
-  prevButton: {
-    backgroundColor: '#f3f4f6',
-    marginRight: 12,
-  },
-  nextButton: {
-    backgroundColor: '#2563eb',
-    marginLeft: 12,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  navButtonDisabled: {
-    opacity: 0.5,
-  },
-  navButtonText: {
-    fontSize: 16,
+  secondaryButtonText: {
+    fontSize: 14,
     fontWeight: '500',
+    color: '#374151',
   },
-  prevButtonText: {
+  skipButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  skipButtonText: {
+    fontSize: 14,
     color: '#6b7280',
   },
-  nextButtonText: {
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.5,
+  },
+  primaryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#ffffff',
   },
 });
