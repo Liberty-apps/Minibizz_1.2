@@ -1,6 +1,6 @@
 import React, { useState, useCallback, memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { FileText, Plus, Search, Filter, Eye, Edit, Download, Send } from 'lucide-react-native';
+import { FileText, Plus, Search, Filter, Eye, CreditCard as Edit, Download, Send } from 'lucide-react-native';
 import { OptimizedList } from '../../components/OptimizedList';
 import { useOptimizedData, usePagination } from '../../hooks/useOptimizedData';
 
