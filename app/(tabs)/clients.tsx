@@ -1,20 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { 
-  Users, 
-  Plus, 
-  Search, 
-  Mail,
-  Phone,
-  MapPin,
-  Building,
-  User,
-  Filter,
-  AlertCircle,
-  Edit3,
-  Trash2
-} from 'lucide-react-native';
+import { Users, Plus, Search, Mail, Phone, MapPin, Building, User, Filter, CircleAlert as AlertCircle, CreditCard as Edit3, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { clientsService } from '../../src/services/database';
 
