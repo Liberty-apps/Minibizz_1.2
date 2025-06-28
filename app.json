@@ -29,7 +29,8 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "static"
     },
     "plugins": [
       "expo-router"
@@ -44,10 +45,6 @@
       "eas": {
         "projectId": "87c17423-3dcf-43b0-b982-08833fe79195"
       }
-    },
-    "optimization": {
-      "minify": true,
-      "treeshake": true
     }
   }
 }
