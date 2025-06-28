@@ -10,7 +10,9 @@ import {
   Zap,
   Shield,
   Globe,
-  Palette
+  Palette,
+  ArrowRight,
+  Info
 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { subscriptionService } from '../../src/services/subscription';
@@ -58,37 +60,75 @@ export default function Abonnement() {
       setCurrentSubscription(subscriptionData);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
+      Alert.alert('Erreur', 'Impossible de charger les informations d\'abonnement');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSubscribe = async (planId: string) => {
-    if (!user) return;
+    if (!user) {
+      Alert.alert('Erreur', 'Vous devez être connecté pour souscrire à un plan');
+      return;
+    }
 
-    try {
-      Alert.alert(
-        'Confirmation',
-        'Souhaitez-vous souscrire à ce plan ?',
-        [
-          { text: 'Annuler', style: 'cancel' },
-          {
-            text: 'Confirmer',
-            onPress: async () => {
-              try {
-                await subscriptionService.subscribe(user.id, planId, billingType);
-                Alert.alert('Succès', 'Abonnement souscrit avec succès !');
-                loadData();
-              } catch (error) {
-                Alert.alert('Erreur', 'Impossible de souscrire à ce plan');
-              }
+    const selectedPlan = plans.find(p => p.id === planId);
+    if (!selectedPlan) return;
+
+    const price = billingType === 'mensuel' ? selectedPlan.prix_mensuel : selectedPlan.prix_annuel;
+    const period = billingType === 'mensuel' ? 'mois' : 'an';
+
+    Alert.alert(
+      'Confirmation d\'abonnement',
+      `Vous allez souscrire au plan "${selectedPlan.nom}" pour ${price}€/${period}.\n\nSouhaitez-vous continuer ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Confirmer',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await subscriptionService.subscribe(user.id, planId, billingType);
+              Alert.alert('Succès', 'Abonnement souscrit avec succès !');
+              loadData();
+            } catch (error) {
+              console.error('Erreur souscription:', error);
+              Alert.alert('Erreur', 'Impossible de souscrire à ce plan. Veuillez réessayer.');
+            } finally {
+              setLoading(false);
             }
           }
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Erreur', 'Une erreur est survenue');
-    }
+        }
+      ]
+    );
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!user || !currentSubscription) return;
+
+    Alert.alert(
+      'Annuler l\'abonnement',
+      'Êtes-vous sûr de vouloir annuler votre abonnement ? Vous conserverez l\'accès jusqu\'à la fin de votre période de facturation.',
+      [
+        { text: 'Non', style: 'cancel' },
+        {
+          text: 'Oui, annuler',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await subscriptionService.cancelSubscription(user.id);
+              Alert.alert('Succès', 'Abonnement annulé avec succès');
+              loadData();
+            } catch (error) {
+              Alert.alert('Erreur', 'Impossible d\'annuler l\'abonnement');
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const getPlanIcon = (planName: string) => {
@@ -114,7 +154,8 @@ export default function Abonnement() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Chargement...</Text>
+        <Crown size={48} color="#2563eb" />
+        <Text style={styles.loadingText}>Chargement...</Text>
       </View>
     );
   }
@@ -137,7 +178,10 @@ export default function Abonnement() {
           <View style={styles.currentCard}>
             <View style={styles.currentInfo}>
               <Text style={styles.currentPlan}>{currentSubscription.plan.nom}</Text>
-              <Text style={styles.currentStatus}>
+              <Text style={[
+                styles.currentStatus,
+                { color: currentSubscription.statut === 'actif' ? '#16a34a' : '#dc2626' }
+              ]}>
                 Statut: {currentSubscription.statut}
               </Text>
               <Text style={styles.currentBilling}>
@@ -145,14 +189,26 @@ export default function Abonnement() {
               </Text>
               {currentSubscription.date_fin && (
                 <Text style={styles.currentExpiry}>
-                  Expire le: {new Date(currentSubscription.date_fin).toLocaleDateString('fr-FR')}
+                  {currentSubscription.statut === 'actif' ? 'Renouvellement' : 'Expire'} le: {' '}
+                  {new Date(currentSubscription.date_fin).toLocaleDateString('fr-FR')}
                 </Text>
               )}
             </View>
-            <TouchableOpacity style={styles.manageButton}>
-              <CreditCard size={20} color="#2563eb" />
-              <Text style={styles.manageText}>Gérer</Text>
-            </TouchableOpacity>
+            <View style={styles.currentActions}>
+              <TouchableOpacity style={styles.manageButton}>
+                <CreditCard size={20} color="#2563eb" />
+                <Text style={styles.manageText}>Gérer</Text>
+              </TouchableOpacity>
+              {currentSubscription.statut === 'actif' && currentSubscription.plan.nom !== 'Freemium' && (
+                <TouchableOpacity 
+                  style={styles.cancelButton}
+                  onPress={handleCancelSubscription}
+                >
+                  <X size={20} color="#dc2626" />
+                  <Text style={styles.cancelText}>Annuler</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
       )}
@@ -246,7 +302,7 @@ export default function Abonnement() {
                   { backgroundColor: isCurrentPlan ? '#f3f4f6' : plan.couleur }
                 ]}
                 onPress={() => !isCurrentPlan && handleSubscribe(plan.id)}
-                disabled={isCurrentPlan}
+                disabled={isCurrentPlan || loading}
               >
                 <Text style={[
                   styles.subscribeText,
@@ -254,6 +310,7 @@ export default function Abonnement() {
                 ]}>
                   {isCurrentPlan ? 'Plan actuel' : 'Choisir ce plan'}
                 </Text>
+                {!isCurrentPlan && <ArrowRight size={16} color="#ffffff" />}
               </TouchableOpacity>
             </View>
           );
@@ -288,6 +345,14 @@ export default function Abonnement() {
           </Text>
         </View>
       </View>
+
+      {/* Info Banner */}
+      <View style={styles.infoBanner}>
+        <Info size={20} color="#2563eb" />
+        <Text style={styles.infoBannerText}>
+          Tous les plans incluent un support client et des mises à jour gratuites
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -301,6 +366,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 12,
   },
   header: {
     alignItems: 'center',
@@ -333,9 +404,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -343,7 +411,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   currentInfo: {
-    flex: 1,
+    marginBottom: 12,
   },
   currentPlan: {
     fontSize: 16,
@@ -352,7 +420,6 @@ const styles = StyleSheet.create({
   },
   currentStatus: {
     fontSize: 14,
-    color: '#16a34a',
     marginTop: 2,
   },
   currentBilling: {
@@ -365,6 +432,10 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 2,
   },
+  currentActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   manageButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -372,11 +443,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
+    flex: 1,
+    justifyContent: 'center',
   },
   manageText: {
     fontSize: 14,
     fontWeight: '500',
     color: '#2563eb',
+    marginLeft: 6,
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  cancelText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#dc2626',
     marginLeft: 6,
   },
   billingToggle: {
@@ -506,9 +595,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   subscribeButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: 'center',
+    gap: 6,
   },
   currentPlanButton: {
     backgroundColor: '#f3f4f6',
@@ -552,5 +644,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 20,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  infoBannerText: {
+    fontSize: 14,
+    color: '#1e40af',
+    marginLeft: 8,
+    flex: 1,
   },
 });

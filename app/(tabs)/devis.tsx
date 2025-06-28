@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { FileText, Plus, Search, Filter, Eye, CreditCard as Edit, Download, Send } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { router } from 'expo-router';
+import { FileText, Plus, Search, Filter, Eye, Edit3, Download, Send, Calendar, Euro } from 'lucide-react-native';
 
 export default function Devis() {
   const [activeTab, setActiveTab] = useState<'devis' | 'factures'>('devis');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const devisList = [
     {
@@ -13,7 +15,8 @@ export default function Devis() {
       date: '15/01/2024',
       montant: '1 250€',
       statut: 'En attente',
-      statutColor: '#eab308'
+      statutColor: '#eab308',
+      validite: '15/02/2024'
     },
     {
       id: '2',
@@ -22,7 +25,8 @@ export default function Devis() {
       date: '12/01/2024',
       montant: '850€',
       statut: 'Accepté',
-      statutColor: '#16a34a'
+      statutColor: '#16a34a',
+      validite: '12/02/2024'
     },
     {
       id: '3',
@@ -31,7 +35,8 @@ export default function Devis() {
       date: '10/01/2024',
       montant: '2 100€',
       statut: 'Brouillon',
-      statutColor: '#6b7280'
+      statutColor: '#6b7280',
+      validite: '10/02/2024'
     }
   ];
 
@@ -55,17 +60,58 @@ export default function Devis() {
       montant: '850€',
       statut: 'Envoyée',
       statutColor: '#2563eb'
+    },
+    {
+      id: '3',
+      numero: 'FAC-2024-003',
+      client: 'Tech Solutions',
+      date: '16/01/2024',
+      echeance: '16/02/2024',
+      montant: '2 100€',
+      statut: 'En retard',
+      statutColor: '#dc2626'
     }
   ];
 
   const currentList = activeTab === 'devis' ? devisList : facturesList;
 
+  const filteredList = currentList.filter(item =>
+    item.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.numero.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleCreateNew = () => {
+    // Navigation vers la création d'un nouveau document
+    console.log(`Créer nouveau ${activeTab}`);
+  };
+
+  const handleViewDocument = (id: string) => {
+    console.log(`Voir ${activeTab} ${id}`);
+  };
+
+  const handleEditDocument = (id: string) => {
+    console.log(`Modifier ${activeTab} ${id}`);
+  };
+
+  const handleDownloadDocument = (id: string) => {
+    console.log(`Télécharger ${activeTab} ${id}`);
+  };
+
+  const handleSendDocument = (id: string) => {
+    console.log(`Envoyer ${activeTab} ${id}`);
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Devis & Factures</Text>
-        <TouchableOpacity style={styles.addButton}>
+        <View>
+          <Text style={styles.title}>Devis & Factures</Text>
+          <Text style={styles.subtitle}>
+            Gérez vos documents commerciaux
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.addButton} onPress={handleCreateNew}>
           <Plus size={20} color="#ffffff" />
         </TouchableOpacity>
       </View>
@@ -94,7 +140,13 @@ export default function Devis() {
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
           <Search size={20} color="#9ca3af" />
-          <Text style={styles.searchPlaceholder}>Rechercher...</Text>
+          <TextInput
+            style={styles.searchInput}
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            placeholder="Rechercher par client ou numéro..."
+            placeholderTextColor="#9ca3af"
+          />
         </View>
         <TouchableOpacity style={styles.filterButton}>
           <Filter size={20} color="#6b7280" />
@@ -103,45 +155,116 @@ export default function Devis() {
 
       {/* List */}
       <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
-        {currentList.map((item) => (
-          <View key={item.id} style={styles.listItem}>
-            <View style={styles.itemHeader}>
-              <View>
-                <Text style={styles.itemNumber}>{item.numero}</Text>
-                <Text style={styles.itemClient}>{item.client}</Text>
-              </View>
-              <View style={styles.itemRight}>
-                <Text style={styles.itemAmount}>{item.montant}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: item.statutColor }]}>
-                  <Text style={styles.statusText}>{item.statut}</Text>
+        {filteredList.length === 0 ? (
+          <View style={styles.emptyState}>
+            <FileText size={64} color="#d1d5db" />
+            <Text style={styles.emptyTitle}>
+              {searchTerm ? 'Aucun résultat' : `Aucun ${activeTab}`}
+            </Text>
+            <Text style={styles.emptyText}>
+              {searchTerm 
+                ? 'Essayez avec d\'autres mots-clés'
+                : `Créez votre premier ${activeTab} en appuyant sur le bouton +`
+              }
+            </Text>
+          </View>
+        ) : (
+          filteredList.map((item) => (
+            <View key={item.id} style={styles.listItem}>
+              <View style={styles.itemHeader}>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemNumber}>{item.numero}</Text>
+                  <Text style={styles.itemClient}>{item.client}</Text>
+                </View>
+                <View style={styles.itemRight}>
+                  <Text style={styles.itemAmount}>{item.montant}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: item.statutColor }]}>
+                    <Text style={styles.statusText}>{item.statut}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-            
-            <View style={styles.itemDetails}>
-              <Text style={styles.itemDate}>Date: {item.date}</Text>
-              {activeTab === 'factures' && 'echeance' in item && (
-                <Text style={styles.itemDate}>Échéance: {item.echeance}</Text>
-              )}
-            </View>
+              
+              <View style={styles.itemDetails}>
+                <View style={styles.detailRow}>
+                  <Calendar size={14} color="#6b7280" />
+                  <Text style={styles.itemDate}>Émis le {item.date}</Text>
+                </View>
+                {activeTab === 'devis' && 'validite' in item && (
+                  <View style={styles.detailRow}>
+                    <Calendar size={14} color="#6b7280" />
+                    <Text style={styles.itemDate}>Valide jusqu'au {item.validite}</Text>
+                  </View>
+                )}
+                {activeTab === 'factures' && 'echeance' in item && (
+                  <View style={styles.detailRow}>
+                    <Euro size={14} color="#6b7280" />
+                    <Text style={styles.itemDate}>Échéance: {item.echeance}</Text>
+                  </View>
+                )}
+              </View>
 
-            <View style={styles.itemActions}>
-              <TouchableOpacity style={styles.actionButton}>
-                <Eye size={16} color="#6b7280" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
-                <Edit size={16} color="#6b7280" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
-                <Download size={16} color="#6b7280" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
-                <Send size={16} color="#6b7280" />
-              </TouchableOpacity>
+              <View style={styles.itemActions}>
+                <TouchableOpacity 
+                  style={styles.actionButton}
+                  onPress={() => handleViewDocument(item.id)}
+                >
+                  <Eye size={16} color="#6b7280" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.actionButton}
+                  onPress={() => handleEditDocument(item.id)}
+                >
+                  <Edit3 size={16} color="#6b7280" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.actionButton}
+                  onPress={() => handleDownloadDocument(item.id)}
+                >
+                  <Download size={16} color="#6b7280" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.actionButton}
+                  onPress={() => handleSendDocument(item.id)}
+                >
+                  <Send size={16} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
       </ScrollView>
+
+      {/* Stats Footer */}
+      <View style={styles.statsFooter}>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>
+            {activeTab === 'devis' ? devisList.length : facturesList.length}
+          </Text>
+          <Text style={styles.statLabel}>Total</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>
+            {activeTab === 'devis' 
+              ? devisList.filter(d => d.statut === 'En attente').length
+              : facturesList.filter(f => f.statut === 'Envoyée').length
+            }
+          </Text>
+          <Text style={styles.statLabel}>
+            {activeTab === 'devis' ? 'En attente' : 'En cours'}
+          </Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>
+            {activeTab === 'devis' 
+              ? devisList.filter(d => d.statut === 'Accepté').length
+              : facturesList.filter(f => f.statut === 'Payée').length
+            }
+          </Text>
+          <Text style={styles.statLabel}>
+            {activeTab === 'devis' ? 'Acceptés' : 'Payées'}
+          </Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -163,6 +286,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#111827',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 4,
   },
   addButton: {
     backgroundColor: '#2563eb',
@@ -212,9 +340,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 12,
   },
-  searchPlaceholder: {
-    color: '#9ca3af',
+  searchInput: {
+    flex: 1,
     fontSize: 16,
+    color: '#111827',
   },
   filterButton: {
     backgroundColor: '#ffffff',
@@ -227,6 +356,24 @@ const styles = StyleSheet.create({
   listContainer: {
     flex: 1,
     padding: 16,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 64,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+    marginTop: 16,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 32,
   },
   listItem: {
     backgroundColor: '#ffffff',
@@ -244,6 +391,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  itemInfo: {
+    flex: 1,
   },
   itemNumber: {
     fontSize: 16,
@@ -276,11 +426,16 @@ const styles = StyleSheet.create({
   },
   itemDetails: {
     marginBottom: 12,
+    gap: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   itemDate: {
     fontSize: 12,
     color: '#6b7280',
-    marginBottom: 2,
   },
   itemActions: {
     flexDirection: 'row',
@@ -294,5 +449,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  statsFooter: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
   },
 });

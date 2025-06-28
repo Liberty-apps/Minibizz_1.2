@@ -2,43 +2,93 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { FileText, Mail, Lock, CircleAlert as AlertCircle, CircleCheck as CheckCircle } from 'lucide-react-native';
+import { FileText, Mail, Lock, CircleAlert as AlertCircle, CircleCheck as CheckCircle, Eye, EyeOff } from 'lucide-react-native';
 
 export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
 
-  const handleSubmit = async () => {
-    if (password !== confirmPassword) {
-      return setError('Les mots de passe ne correspondent pas');
+  const validateForm = () => {
+    if (!email.trim()) {
+      return 'Veuillez saisir votre adresse email';
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return 'Veuillez saisir une adresse email valide';
+    }
+
+    if (!password.trim()) {
+      return 'Veuillez saisir un mot de passe';
     }
 
     if (password.length < 6) {
-      return setError('Le mot de passe doit contenir au moins 6 caractères');
+      return 'Le mot de passe doit contenir au moins 6 caractères';
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
-      return setError('Veuillez saisir une adresse email valide');
+    if (!confirmPassword.trim()) {
+      return 'Veuillez confirmer votre mot de passe';
+    }
+
+    if (password !== confirmPassword) {
+      return 'Les mots de passe ne correspondent pas';
+    }
+
+    return null;
+  };
+
+  const getPasswordStrength = () => {
+    if (password.length === 0) return { strength: 0, label: '', color: '#e5e7eb' };
+    if (password.length < 6) return { strength: 25, label: 'Faible', color: '#dc2626' };
+    if (password.length < 8) return { strength: 50, label: 'Moyen', color: '#eab308' };
+    if (password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password)) {
+      return { strength: 100, label: 'Fort', color: '#16a34a' };
+    }
+    return { strength: 75, label: 'Bon', color: '#059669' };
+  };
+
+  const handleSubmit = async () => {
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
     }
     
     try {
       setError('');
       setLoading(true);
       console.log('Attempting to register with:', email);
-      await register(email, password);
+      await register(email.trim(), password);
       console.log('Registration successful, navigating to dashboard');
       router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Registration failed:', error);
-      setError(error.message || 'Échec de la création du compte. Vérifiez vos informations.');
+      
+      // Messages d'erreur plus explicites
+      let errorMessage = 'Échec de la création du compte. Vérifiez vos informations.';
+      
+      if (error.message.includes('Configuration Supabase manquante')) {
+        errorMessage = 'Erreur de configuration. Contactez le support technique.';
+      } else if (error.message.includes('Un compte existe déjà')) {
+        errorMessage = 'Un compte existe déjà avec cette adresse email';
+      } else if (error.message.includes('Impossible de se connecter au serveur')) {
+        errorMessage = 'Problème de connexion. Vérifiez votre connexion internet.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  const passwordStrength = getPasswordStrength();
+  const isPasswordMatch = confirmPassword.length > 0 && password === confirmPassword;
 
   return (
     <View style={styles.container}>
@@ -73,6 +123,7 @@ export default function Register() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
+                editable={!loading}
               />
             </View>
           </View>
@@ -86,10 +137,42 @@ export default function Register() {
                 value={password}
                 onChangeText={setPassword}
                 placeholder="••••••••"
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 autoComplete="new-password"
+                editable={!loading}
               />
+              <TouchableOpacity 
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} color="#9ca3af" />
+                ) : (
+                  <Eye size={20} color="#9ca3af" />
+                )}
+              </TouchableOpacity>
             </View>
+            
+            {/* Password Strength Indicator */}
+            {password.length > 0 && (
+              <View style={styles.passwordStrength}>
+                <View style={styles.strengthBar}>
+                  <View 
+                    style={[
+                      styles.strengthFill, 
+                      { 
+                        width: `${passwordStrength.strength}%`,
+                        backgroundColor: passwordStrength.color
+                      }
+                    ]} 
+                  />
+                </View>
+                <Text style={[styles.strengthText, { color: passwordStrength.color }]}>
+                  {passwordStrength.label}
+                </Text>
+              </View>
+            )}
+            
             <Text style={styles.helperText}>Au moins 6 caractères</Text>
           </View>
 
@@ -102,11 +185,24 @@ export default function Register() {
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 placeholder="••••••••"
-                secureTextEntry
+                secureTextEntry={!showConfirmPassword}
                 autoComplete="new-password"
+                editable={!loading}
               />
-              {confirmPassword && password === confirmPassword && (
-                <CheckCircle color="#10b981" size={20} style={styles.inputIcon} />
+              <TouchableOpacity 
+                style={styles.eyeButton}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff size={20} color="#9ca3af" />
+                ) : (
+                  <Eye size={20} color="#9ca3af" />
+                )}
+              </TouchableOpacity>
+              {isPasswordMatch && (
+                <View style={styles.checkIcon}>
+                  <CircleCheck color="#10b981" size={20} />
+                </View>
               )}
             </View>
           </View>
@@ -129,6 +225,21 @@ export default function Register() {
               </Link>
             </Text>
           </View>
+
+          {/* Informations de débogage en mode développement */}
+          {__DEV__ && (
+            <View style={styles.debugContainer}>
+              <Text style={styles.debugText}>
+                Mode développement - Vérifiez votre fichier .env
+              </Text>
+              <Text style={styles.debugText}>
+                URL: {process.env.EXPO_PUBLIC_SUPABASE_URL ? '✓ Configurée' : '✗ Manquante'}
+              </Text>
+              <Text style={styles.debugText}>
+                Clé: {process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? '✓ Configurée' : '✗ Manquante'}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -222,6 +333,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
   },
+  eyeButton: {
+    padding: 12,
+  },
+  checkIcon: {
+    marginRight: 12,
+  },
+  passwordStrength: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 8,
+  },
+  strengthBar: {
+    flex: 1,
+    height: 4,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 2,
+  },
+  strengthFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  strengthText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
   helperText: {
     fontSize: 12,
     color: '#6b7280',
@@ -253,5 +390,18 @@ const styles = StyleSheet.create({
   link: {
     color: '#2563eb',
     fontWeight: '500',
+  },
+  debugContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
   },
 });

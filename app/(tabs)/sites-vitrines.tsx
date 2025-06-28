@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
-import { Globe, Plus, Eye, CreditCard as Edit3, Settings, Trash2, ExternalLink, Palette, LayoutGrid as Layout, Image as ImageIcon } from 'lucide-react-native';
+import { Globe, Plus, Eye, Edit3, Settings, Trash2, ExternalLink, Palette, Layout, Image as ImageIcon, Search } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { sitesService } from '../../src/services/sites';
 
@@ -31,6 +31,7 @@ export default function SitesVitrines() {
   const [siteName, setSiteName] = useState('');
   const [sousdomaine, setSousdomaine] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadData();
@@ -49,18 +50,50 @@ export default function SitesVitrines() {
       setTemplates(templatesData);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
+      Alert.alert('Erreur', 'Impossible de charger les sites');
     } finally {
       setLoading(false);
     }
   };
 
+  const validateForm = () => {
+    if (!siteName.trim()) {
+      return 'Veuillez saisir un nom pour votre site';
+    }
+    if (!sousdomaine.trim()) {
+      return 'Veuillez saisir un sous-domaine';
+    }
+    if (!/^[a-z0-9-]+$/.test(sousdomaine)) {
+      return 'Le sous-domaine ne peut contenir que des lettres minuscules, chiffres et tirets';
+    }
+    if (!selectedTemplate) {
+      return 'Veuillez sélectionner un template';
+    }
+    return null;
+  };
+
   const handleCreateSite = async () => {
-    if (!user || !siteName.trim() || !sousdomaine.trim() || !selectedTemplate) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+    const validationError = validateForm();
+    if (validationError) {
+      Alert.alert('Erreur', validationError);
+      return;
+    }
+
+    if (!user) {
+      Alert.alert('Erreur', 'Vous devez être connecté pour créer un site');
       return;
     }
 
     try {
+      setLoading(true);
+      
+      // Vérifier la disponibilité du sous-domaine
+      const isAvailable = await sitesService.checkSubdomainAvailability(sousdomaine.trim().toLowerCase());
+      if (!isAvailable) {
+        Alert.alert('Erreur', 'Ce sous-domaine est déjà utilisé. Veuillez en choisir un autre.');
+        return;
+      }
+
       await sitesService.createSite({
         user_id: user.id,
         nom: siteName.trim(),
@@ -77,15 +110,22 @@ export default function SitesVitrines() {
       setSousdomaine('');
       setSelectedTemplate('');
       loadData();
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible de créer le site');
+    } catch (error: any) {
+      console.error('Erreur création site:', error);
+      if (error.message.includes('duplicate')) {
+        Alert.alert('Erreur', 'Ce sous-domaine est déjà utilisé');
+      } else {
+        Alert.alert('Erreur', 'Impossible de créer le site. Veuillez réessayer.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDeleteSite = (siteId: string, siteName: string) => {
     Alert.alert(
       'Confirmer la suppression',
-      `Êtes-vous sûr de vouloir supprimer le site "${siteName}" ?`,
+      `Êtes-vous sûr de vouloir supprimer le site "${siteName}" ?\n\nCette action est irréversible.`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -93,16 +133,37 @@ export default function SitesVitrines() {
           style: 'destructive',
           onPress: async () => {
             try {
+              setLoading(true);
               await sitesService.deleteSite(siteId);
               Alert.alert('Succès', 'Site supprimé avec succès');
               loadData();
             } catch (error) {
               Alert.alert('Erreur', 'Impossible de supprimer le site');
+            } finally {
+              setLoading(false);
             }
           }
         }
       ]
     );
+  };
+
+  const handlePublishSite = async (siteId: string, currentStatus: string) => {
+    try {
+      setLoading(true);
+      if (currentStatus === 'publie') {
+        await sitesService.unpublishSite(siteId);
+        Alert.alert('Succès', 'Site mis en brouillon');
+      } else {
+        await sitesService.publishSite(siteId);
+        Alert.alert('Succès', 'Site publié avec succès');
+      }
+      loadData();
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de modifier le statut du site');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusColor = (statut: string) => {
@@ -123,10 +184,16 @@ export default function SitesVitrines() {
     }
   };
 
-  if (loading) {
+  const filteredSites = sites.filter(site =>
+    site.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    site.sous_domaine.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading && sites.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Chargement...</Text>
+        <Globe size={48} color="#2563eb" />
+        <Text style={styles.loadingText}>Chargement...</Text>
       </View>
     );
   }
@@ -149,24 +216,47 @@ export default function SitesVitrines() {
         </TouchableOpacity>
       </View>
 
+      {/* Search */}
+      {sites.length > 0 && (
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBox}>
+            <Search size={20} color="#9ca3af" />
+            <TextInput
+              style={styles.searchInput}
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+              placeholder="Rechercher un site..."
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+        </View>
+      )}
+
       {/* Sites List */}
-      {sites.length === 0 ? (
+      {filteredSites.length === 0 ? (
         <View style={styles.emptyState}>
           <Globe size={64} color="#d1d5db" />
-          <Text style={styles.emptyTitle}>Aucun site créé</Text>
-          <Text style={styles.emptyText}>
-            Créez votre premier site vitrine pour présenter votre activité en ligne
+          <Text style={styles.emptyTitle}>
+            {searchTerm ? 'Aucun site trouvé' : 'Aucun site créé'}
           </Text>
-          <TouchableOpacity 
-            style={styles.createFirstButton}
-            onPress={() => setShowCreateModal(true)}
-          >
-            <Text style={styles.createFirstText}>Créer mon premier site</Text>
-          </TouchableOpacity>
+          <Text style={styles.emptyText}>
+            {searchTerm 
+              ? 'Essayez avec d\'autres mots-clés'
+              : 'Créez votre premier site vitrine pour présenter votre activité en ligne'
+            }
+          </Text>
+          {!searchTerm && (
+            <TouchableOpacity 
+              style={styles.createFirstButton}
+              onPress={() => setShowCreateModal(true)}
+            >
+              <Text style={styles.createFirstText}>Créer mon premier site</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <View style={styles.sitesContainer}>
-          {sites.map((site) => (
+          {filteredSites.map((site) => (
             <View key={site.id} style={styles.siteCard}>
               <View style={styles.siteHeader}>
                 <View style={styles.siteInfo}>
@@ -207,12 +297,29 @@ export default function SitesVitrines() {
                 </View>
               </View>
 
-              {site.statut === 'publie' && (
-                <TouchableOpacity style={styles.visitButton}>
-                  <ExternalLink size={16} color="#2563eb" />
-                  <Text style={styles.visitText}>Visiter le site</Text>
+              <View style={styles.siteFooter}>
+                <TouchableOpacity 
+                  style={[
+                    styles.publishButton,
+                    { backgroundColor: site.statut === 'publie' ? '#fef2f2' : '#f0fdf4' }
+                  ]}
+                  onPress={() => handlePublishSite(site.id, site.statut)}
+                >
+                  <Text style={[
+                    styles.publishText,
+                    { color: site.statut === 'publie' ? '#dc2626' : '#16a34a' }
+                  ]}>
+                    {site.statut === 'publie' ? 'Dépublier' : 'Publier'}
+                  </Text>
                 </TouchableOpacity>
-              )}
+
+                {site.statut === 'publie' && (
+                  <TouchableOpacity style={styles.visitButton}>
+                    <ExternalLink size={16} color="#2563eb" />
+                    <Text style={styles.visitText}>Visiter</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           ))}
         </View>
@@ -225,30 +332,35 @@ export default function SitesVitrines() {
             <Text style={styles.modalTitle}>Créer un nouveau site</Text>
             
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Nom du site</Text>
+              <Text style={styles.label}>Nom du site *</Text>
               <TextInput
                 style={styles.input}
                 value={siteName}
                 onChangeText={setSiteName}
                 placeholder="Mon entreprise"
+                placeholderTextColor="#9ca3af"
               />
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Sous-domaine</Text>
+              <Text style={styles.label}>Sous-domaine *</Text>
               <View style={styles.urlInput}>
                 <TextInput
                   style={styles.subdomainInput}
                   value={sousdomaine}
-                  onChangeText={setSousdomaine}
+                  onChangeText={(text) => setSousdomaine(text.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                   placeholder="monentreprise"
+                  placeholderTextColor="#9ca3af"
                 />
                 <Text style={styles.urlSuffix}>.minibizz.fr</Text>
               </View>
+              <Text style={styles.helperText}>
+                Lettres minuscules, chiffres et tirets uniquement
+              </Text>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Template</Text>
+              <Text style={styles.label}>Template *</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.templatesContainer}>
                   {templates.map((template) => (
@@ -276,15 +388,23 @@ export default function SitesVitrines() {
             <View style={styles.modalActions}>
               <TouchableOpacity 
                 style={styles.cancelButton}
-                onPress={() => setShowCreateModal(false)}
+                onPress={() => {
+                  setShowCreateModal(false);
+                  setSiteName('');
+                  setSousdomaine('');
+                  setSelectedTemplate('');
+                }}
               >
                 <Text style={styles.cancelText}>Annuler</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={styles.createButton}
+                style={[styles.createButton, loading && styles.createButtonDisabled]}
                 onPress={handleCreateSite}
+                disabled={loading}
               >
-                <Text style={styles.createText}>Créer le site</Text>
+                <Text style={styles.createText}>
+                  {loading ? 'Création...' : 'Créer le site'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -331,6 +451,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 12,
   },
   header: {
     flexDirection: 'row',
@@ -358,6 +484,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  searchContainer: {
+    padding: 16,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#111827',
+  },
   emptyState: {
     alignItems: 'center',
     padding: 48,
@@ -375,6 +518,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 24,
+    paddingHorizontal: 32,
   },
   createFirstButton: {
     backgroundColor: '#2563eb',
@@ -406,6 +550,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    marginBottom: 12,
   },
   siteInfo: {
     flex: 1,
@@ -452,14 +597,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  siteFooter: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  publishButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  publishText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
   visitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#eff6ff',
     paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 8,
-    marginTop: 12,
   },
   visitText: {
     fontSize: 14,
@@ -508,6 +667,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
+    color: '#111827',
   },
   urlInput: {
     flexDirection: 'row',
@@ -521,12 +681,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
+    color: '#111827',
   },
   urlSuffix: {
     paddingHorizontal: 12,
     fontSize: 16,
     color: '#6b7280',
     backgroundColor: '#f9fafb',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
   },
   templatesContainer: {
     flexDirection: 'row',
@@ -587,6 +753,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     backgroundColor: '#2563eb',
+  },
+  createButtonDisabled: {
+    opacity: 0.5,
   },
   createText: {
     fontSize: 16,

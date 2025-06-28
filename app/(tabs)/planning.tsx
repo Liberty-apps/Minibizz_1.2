@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 import { 
   Calendar, 
   Plus, 
@@ -7,11 +8,16 @@ import {
   User,
   MapPin,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Filter,
+  CheckCircle,
+  AlertCircle,
+  XCircle
 } from 'lucide-react-native';
 
 export default function Planning() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'today' | 'week'>('today');
 
   const events = [
     {
@@ -21,7 +27,9 @@ export default function Planning() {
       client: 'Entreprise ABC',
       location: 'Bureau client',
       type: 'meeting',
-      color: '#2563eb'
+      statut: 'confirme',
+      color: '#2563eb',
+      date: new Date()
     },
     {
       id: '2',
@@ -30,7 +38,9 @@ export default function Planning() {
       client: 'Marie Dupont',
       location: 'Visioconférence',
       type: 'presentation',
-      color: '#16a34a'
+      statut: 'planifie',
+      color: '#16a34a',
+      date: new Date()
     },
     {
       id: '3',
@@ -39,19 +49,101 @@ export default function Planning() {
       client: 'Tech Solutions',
       location: 'Téléphone',
       type: 'call',
-      color: '#eab308'
+      statut: 'reporte',
+      color: '#eab308',
+      date: new Date(Date.now() + 86400000) // Demain
+    },
+    {
+      id: '4',
+      title: 'Formation client',
+      time: '10:00 - 12:00',
+      client: 'Jean Martin',
+      location: 'Sur site',
+      type: 'formation',
+      statut: 'termine',
+      color: '#9333ea',
+      date: new Date(Date.now() - 86400000) // Hier
     }
   ];
 
   const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   const currentMonth = currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 
+  const getFilteredEvents = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    switch (selectedFilter) {
+      case 'today':
+        return events.filter(event => {
+          const eventDate = new Date(event.date);
+          eventDate.setHours(0, 0, 0, 0);
+          return eventDate.getTime() === today.getTime();
+        });
+      case 'week':
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay() + 1);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        return events.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate >= weekStart && eventDate <= weekEnd;
+        });
+      default:
+        return events;
+    }
+  };
+
+  const getStatutIcon = (statut: string) => {
+    switch (statut) {
+      case 'confirme':
+      case 'termine':
+        return CheckCircle;
+      case 'reporte':
+        return AlertCircle;
+      case 'annule':
+        return XCircle;
+      default:
+        return Clock;
+    }
+  };
+
+  const getStatutColor = (statut: string) => {
+    switch (statut) {
+      case 'confirme':
+        return '#16a34a';
+      case 'termine':
+        return '#059669';
+      case 'reporte':
+        return '#eab308';
+      case 'annule':
+        return '#dc2626';
+      default:
+        return '#6b7280';
+    }
+  };
+
+  const handleAddEvent = () => {
+    console.log('Ajouter un événement');
+  };
+
+  const handleEventPress = (eventId: string) => {
+    console.log('Voir événement:', eventId);
+  };
+
+  const filteredEvents = getFilteredEvents();
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Planning</Text>
-        <TouchableOpacity style={styles.addButton}>
+        <View>
+          <Text style={styles.title}>Planning</Text>
+          <Text style={styles.subtitle}>
+            Organisez votre emploi du temps
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.addButton} onPress={handleAddEvent}>
           <Plus size={20} color="#ffffff" />
         </TouchableOpacity>
       </View>
@@ -76,60 +168,114 @@ export default function Planning() {
         ))}
       </View>
 
-      {/* Today's Events */}
-      <View style={styles.todaySection}>
-        <View style={styles.todayHeader}>
-          <Text style={styles.todayTitle}>Aujourd'hui</Text>
-          <Text style={styles.todayDate}>
-            {new Date().toLocaleDateString('fr-FR', { 
-              weekday: 'long', 
-              day: 'numeric', 
-              month: 'long' 
-            })}
+      {/* Filter Tabs */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity 
+          style={[styles.filterTab, selectedFilter === 'today' && styles.activeFilterTab]}
+          onPress={() => setSelectedFilter('today')}
+        >
+          <Text style={[styles.filterText, selectedFilter === 'today' && styles.activeFilterText]}>
+            Aujourd'hui
           </Text>
-        </View>
-
-        <ScrollView style={styles.eventsContainer} showsVerticalScrollIndicator={false}>
-          {events.map((event) => (
-            <TouchableOpacity key={event.id} style={styles.eventCard}>
-              <View style={[styles.eventIndicator, { backgroundColor: event.color }]} />
-              <View style={styles.eventContent}>
-                <View style={styles.eventHeader}>
-                  <Text style={styles.eventTitle}>{event.title}</Text>
-                  <Text style={styles.eventTime}>{event.time}</Text>
-                </View>
-                <View style={styles.eventDetails}>
-                  <View style={styles.eventDetail}>
-                    <User size={14} color="#6b7280" />
-                    <Text style={styles.eventDetailText}>{event.client}</Text>
-                  </View>
-                  <View style={styles.eventDetail}>
-                    <MapPin size={14} color="#6b7280" />
-                    <Text style={styles.eventDetailText}>{event.location}</Text>
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.filterTab, selectedFilter === 'week' && styles.activeFilterTab]}
+          onPress={() => setSelectedFilter('week')}
+        >
+          <Text style={[styles.filterText, selectedFilter === 'week' && styles.activeFilterText]}>
+            Cette semaine
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.filterTab, selectedFilter === 'all' && styles.activeFilterTab]}
+          onPress={() => setSelectedFilter('all')}
+        >
+          <Text style={[styles.filterText, selectedFilter === 'all' && styles.activeFilterText]}>
+            Tout
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Events List */}
+      <ScrollView style={styles.eventsContainer} showsVerticalScrollIndicator={false}>
+        {filteredEvents.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Calendar size={64} color="#d1d5db" />
+            <Text style={styles.emptyTitle}>Aucun événement</Text>
+            <Text style={styles.emptyText}>
+              {selectedFilter === 'today' 
+                ? 'Aucun événement prévu aujourd\'hui'
+                : selectedFilter === 'week'
+                ? 'Aucun événement cette semaine'
+                : 'Votre planning est vide'
+              }
+            </Text>
+          </View>
+        ) : (
+          filteredEvents.map((event) => {
+            const StatutIcon = getStatutIcon(event.statut);
+            const statutColor = getStatutColor(event.statut);
+            
+            return (
+              <TouchableOpacity 
+                key={event.id} 
+                style={styles.eventCard}
+                onPress={() => handleEventPress(event.id)}
+              >
+                <View style={[styles.eventIndicator, { backgroundColor: event.color }]} />
+                <View style={styles.eventContent}>
+                  <View style={styles.eventHeader}>
+                    <Text style={styles.eventTitle}>{event.title}</Text>
+                    <View style={styles.eventStatus}>
+                      <StatutIcon size={16} color={statutColor} />
+                      <Text style={[styles.eventTime, { color: statutColor }]}>
+                        {event.time}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.eventDetails}>
+                    <View style={styles.eventDetail}>
+                      <User size={14} color="#6b7280" />
+                      <Text style={styles.eventDetailText}>{event.client}</Text>
+                    </View>
+                    <View style={styles.eventDetail}>
+                      <MapPin size={14} color="#6b7280" />
+                      <Text style={styles.eventDetailText}>{event.location}</Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        )}
+      </ScrollView>
 
       {/* Quick Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
           <Calendar size={20} color="#2563eb" />
-          <Text style={styles.statNumber}>3</Text>
+          <Text style={styles.statNumber}>
+            {events.filter(e => {
+              const today = new Date();
+              const eventDate = new Date(e.date);
+              return eventDate.toDateString() === today.toDateString();
+            }).length}
+          </Text>
           <Text style={styles.statLabel}>Aujourd'hui</Text>
         </View>
         <View style={styles.statItem}>
           <Clock size={20} color="#16a34a" />
-          <Text style={styles.statNumber}>12</Text>
-          <Text style={styles.statLabel}>Cette semaine</Text>
+          <Text style={styles.statNumber}>
+            {events.filter(e => e.statut === 'confirme').length}
+          </Text>
+          <Text style={styles.statLabel}>Confirmés</Text>
         </View>
         <View style={styles.statItem}>
-          <User size={20} color="#eab308" />
-          <Text style={styles.statNumber}>8</Text>
-          <Text style={styles.statLabel}>Ce mois</Text>
+          <CheckCircle size={20} color="#059669" />
+          <Text style={styles.statNumber}>
+            {events.filter(e => e.statut === 'termine').length}
+          </Text>
+          <Text style={styles.statLabel}>Terminés</Text>
         </View>
       </View>
     </View>
@@ -153,6 +299,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#111827',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 4,
   },
   addButton: {
     backgroundColor: '#2563eb',
@@ -199,25 +350,57 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#6b7280',
   },
-  todaySection: {
+  filterContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    margin: 16,
+    borderRadius: 12,
+    padding: 4,
+  },
+  filterTab: {
     flex: 1,
-    padding: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
   },
-  todayHeader: {
-    marginBottom: 16,
+  activeFilterTab: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  todayTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  todayDate: {
+  filterText: {
     fontSize: 14,
+    fontWeight: '500',
     color: '#6b7280',
-    marginTop: 4,
+  },
+  activeFilterText: {
+    color: '#111827',
   },
   eventsContainer: {
     flex: 1,
+    padding: 16,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 64,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+    marginTop: 16,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 32,
   },
   eventCard: {
     flexDirection: 'row',
@@ -249,11 +432,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+    flex: 1,
+  },
+  eventStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   eventTime: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#2563eb',
   },
   eventDetails: {
     gap: 4,

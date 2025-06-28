@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { 
   Calculator, 
   Euro, 
   TrendingUp,
   TrendingDown,
-  Info
+  Info,
+  BarChart3,
+  PieChart,
+  Target
 } from 'lucide-react-native';
 
 export default function Calculs() {
   const [chiffreAffaires, setChiffreAffaires] = useState('');
   const [typeActivite, setTypeActivite] = useState<'vente' | 'service' | 'liberal'>('service');
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const tauxCharges = {
     vente: 0.123,      // 12.3%
@@ -18,14 +22,36 @@ export default function Calculs() {
     liberal: 0.22      // 22%
   };
 
+  const seuilsCA = {
+    vente: 188700,
+    service: 77700,
+    liberal: 77700
+  };
+
   const ca = parseFloat(chiffreAffaires) || 0;
   const charges = ca * tauxCharges[typeActivite];
   const revenuNet = ca - charges;
+  const caAnnuel = ca * 12;
+  const seuilAtteint = (caAnnuel / seuilsCA[typeActivite]) * 100;
 
   const activiteLabels = {
     vente: 'Vente de marchandises',
     service: 'Prestations de services',
     liberal: 'Activité libérale'
+  };
+
+  const handleSimulationAnnuelle = () => {
+    if (ca === 0) {
+      Alert.alert('Information', 'Veuillez saisir un chiffre d\'affaires pour voir la simulation annuelle');
+      return;
+    }
+    setShowAdvanced(!showAdvanced);
+  };
+
+  const getSeuilColor = () => {
+    if (seuilAtteint < 70) return '#16a34a';
+    if (seuilAtteint < 90) return '#eab308';
+    return '#dc2626';
   };
 
   return (
@@ -46,13 +72,16 @@ export default function Calculs() {
         {/* Input CA */}
         <View style={styles.inputSection}>
           <Text style={styles.inputLabel}>Chiffre d'affaires mensuel (€)</Text>
-          <TextInput
-            style={styles.input}
-            value={chiffreAffaires}
-            onChangeText={setChiffreAffaires}
-            placeholder="Ex: 3000"
-            keyboardType="numeric"
-          />
+          <View style={styles.inputContainer}>
+            <Euro size={20} color="#9ca3af" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={chiffreAffaires}
+              onChangeText={setChiffreAffaires}
+              placeholder="Ex: 3000"
+              keyboardType="numeric"
+            />
+          </View>
         </View>
 
         {/* Activity Type */}
@@ -88,7 +117,7 @@ export default function Calculs() {
         {/* Results */}
         {ca > 0 && (
           <View style={styles.resultsSection}>
-            <Text style={styles.resultsTitle}>Résultats</Text>
+            <Text style={styles.resultsTitle}>Résultats mensuels</Text>
             
             <View style={styles.resultItem}>
               <View style={styles.resultHeader}>
@@ -117,9 +146,74 @@ export default function Calculs() {
                 {revenuNet.toLocaleString('fr-FR')} €
               </Text>
             </View>
+
+            {/* Seuil Progress */}
+            <View style={styles.seuilSection}>
+              <View style={styles.seuilHeader}>
+                <Target size={16} color={getSeuilColor()} />
+                <Text style={styles.seuilTitle}>Seuil de chiffre d'affaires</Text>
+              </View>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { 
+                      width: `${Math.min(seuilAtteint, 100)}%`,
+                      backgroundColor: getSeuilColor()
+                    }
+                  ]} 
+                />
+              </View>
+              <Text style={styles.seuilText}>
+                {caAnnuel.toLocaleString('fr-FR')} € / {seuilsCA[typeActivite].toLocaleString('fr-FR')} € 
+                ({seuilAtteint.toFixed(1)}%)
+              </Text>
+            </View>
           </View>
         )}
       </View>
+
+      {/* Advanced Simulation Button */}
+      {ca > 0 && (
+        <TouchableOpacity 
+          style={styles.advancedButton}
+          onPress={handleSimulationAnnuelle}
+        >
+          <BarChart3 size={20} color="#2563eb" />
+          <Text style={styles.advancedButtonText}>
+            {showAdvanced ? 'Masquer' : 'Voir'} la simulation annuelle
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Advanced Results */}
+      {showAdvanced && ca > 0 && (
+        <View style={styles.advancedCard}>
+          <View style={styles.cardHeader}>
+            <PieChart size={24} color="#9333ea" />
+            <Text style={styles.cardTitle}>Projection annuelle</Text>
+          </View>
+
+          <View style={styles.annualResults}>
+            <View style={styles.annualItem}>
+              <Text style={styles.annualLabel}>CA annuel projeté</Text>
+              <Text style={styles.annualValue}>{caAnnuel.toLocaleString('fr-FR')} €</Text>
+            </View>
+            <View style={styles.annualItem}>
+              <Text style={styles.annualLabel}>Charges annuelles</Text>
+              <Text style={[styles.annualValue, { color: '#dc2626' }]}>
+                {(charges * 12).toLocaleString('fr-FR')} €
+              </Text>
+            </View>
+            <View style={styles.annualItem}>
+              <Text style={styles.annualLabel}>Revenu net annuel</Text>
+              <Text style={[styles.annualValue, { color: '#16a34a', fontSize: 20, fontWeight: 'bold' }]}>
+                {(revenuNet * 12).toLocaleString('fr-FR')} €
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Info Card */}
       <View style={styles.infoCard}>
@@ -145,6 +239,9 @@ export default function Calculs() {
           </Text>
           <Text style={styles.infoText}>
             - Libéral : 77 700 € / an
+          </Text>
+          <Text style={styles.infoText}>
+            • Au-delà de ces seuils, vous basculez vers le régime réel
           </Text>
         </View>
       </View>
@@ -219,14 +316,23 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 8,
   },
-  input: {
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
     backgroundColor: '#ffffff',
+  },
+  inputIcon: {
+    marginLeft: 12,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    color: '#111827',
   },
   activityButtons: {
     gap: 8,
@@ -299,6 +405,86 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   resultValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  seuilSection: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+  },
+  seuilHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  seuilTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginLeft: 6,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  seuilText: {
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  advancedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  advancedButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#2563eb',
+    marginLeft: 8,
+  },
+  advancedCard: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  annualResults: {
+    gap: 12,
+  },
+  annualItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  annualLabel: {
+    fontSize: 16,
+    color: '#374151',
+  },
+  annualValue: {
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
