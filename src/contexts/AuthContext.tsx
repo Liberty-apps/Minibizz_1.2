@@ -8,7 +8,6 @@ interface AuthUser extends User {
   profile?: {
     nom?: string;
     prenom?: string;
-    activite_principale?: string;
     onboarding_completed?: boolean;
   };
   name?: string;
@@ -20,7 +19,6 @@ interface AuthContextType {
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  updateProfile: () => Promise<void>;
   loading: boolean;
 }
 
@@ -57,15 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserProfile = async (authUser: User) => {
     try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('nom, prenom, activite_principale, onboarding_completed')
-        .eq('id', authUser.id)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Erreur lors du chargement du profil:', error);
-      }
+      const profile = await onboardingService.getProfile(authUser.id);
 
       const userWithProfile: AuthUser = {
         ...authUser,
@@ -75,12 +65,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(userWithProfile);
 
-      // Vérifier si l'onboarding est nécessaire
+      // Rediriger vers l'onboarding si pas complété
       if (profile && !profile.onboarding_completed) {
-        const needsOnboarding = await onboardingService.needsOnboarding(authUser.id);
-        if (needsOnboarding) {
-          router.replace('/(auth)/onboarding');
-        }
+        router.replace('/(auth)/onboarding');
       }
     } catch (error) {
       console.error('Erreur lors du chargement du profil:', error);
@@ -91,11 +78,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(basicUser);
     }
-  };
-
-  const updateProfile = async () => {
-    if (!user) return;
-    await loadUserProfile(user);
   };
 
   const login = async (email: string, password: string) => {
@@ -165,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .insert({
               id: data.user.id,
               email: data.user.email!,
-              onboarding_completed: false
+              onboarding_completed: false,
             });
 
           if (profileError && profileError.code !== '23505') { // Ignore duplicate key error
@@ -223,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, resetPassword, updateProfile, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, resetPassword, loading }}>
       {children}
     </AuthContext.Provider>
   );

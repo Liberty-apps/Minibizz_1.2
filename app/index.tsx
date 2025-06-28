@@ -9,7 +9,12 @@ export default function Index() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        router.replace('/(tabs)');
+        // Vérifier si l'onboarding est complété
+        if (user.profile?.onboarding_completed === false) {
+          router.replace('/(auth)/onboarding');
+        } else {
+          router.replace('/(tabs)');
+        }
       } else {
         // Rediriger vers la page de test au lieu de login direct
         router.replace('/(auth)/test-login');

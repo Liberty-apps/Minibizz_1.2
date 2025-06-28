@@ -1,62 +1,58 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
 import { router } from 'expo-router';
-import { ChevronLeft, ChevronRight, User, Building, Upload, Briefcase, Check, Star } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
-import { onboardingService } from '@/services/onboarding';
-
-interface OnboardingData {
-  nom: string;
-  prenom: string;
-  nomEntreprise: string;
-  logoUrl: string;
-  secteurActivite: string;
-}
-
-const SECTEURS_ACTIVITE = [
-  'Conseil en informatique',
-  'Développement web',
-  'Design graphique',
-  'Marketing digital',
-  'Photographie',
-  'Rédaction web',
-  'Formation',
-  'Coaching',
-  'Traduction',
-  'Comptabilité',
-  'Architecture',
-  'Ingénierie',
-  'Artisanat',
-  'Commerce',
-  'Services à la personne',
-  'Santé et bien-être',
-  'Immobilier',
-  'Transport',
-  'Restauration',
-  'Autre'
-];
+import { User, Building, Briefcase, Upload, Check, ArrowRight } from 'lucide-react-native';
+import { useAuth } from '../../src/contexts/AuthContext';
+import { onboardingService, ACTIVITES_PROFESSIONNELLES, type OnboardingData } from '../../src/services/onboarding';
 
 export default function Onboarding() {
-  const { user, updateProfile } = useAuth();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<OnboardingData>({
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState<OnboardingData>({
     nom: '',
     prenom: '',
-    nomEntreprise: '',
-    logoUrl: '',
-    secteurActivite: ''
+    nom_entreprise: '',
+    activite_principale: '',
+    logo_url: ''
   });
 
   const totalSteps = 4;
 
+  const validateStep = (step: number): string | null => {
+    switch (step) {
+      case 1:
+        if (!formData.prenom.trim()) return 'Le prénom est obligatoire';
+        if (!formData.nom.trim()) return 'Le nom est obligatoire';
+        return null;
+      case 2:
+        // Nom d'entreprise optionnel
+        return null;
+      case 3:
+        // Logo optionnel
+        return null;
+      case 4:
+        if (!formData.activite_principale) return 'Veuillez sélectionner votre secteur d\'activité';
+        return null;
+      default:
+        return null;
+    }
+  };
+
   const handleNext = () => {
-    if (validateCurrentStep()) {
-      if (currentStep < totalSteps) {
-        setCurrentStep(currentStep + 1);
-      } else {
-        handleComplete();
-      }
+    const error = validateStep(currentStep);
+    if (error) {
+      Alert.alert('Erreur', error);
+      return;
+    }
+
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleComplete();
     }
   };
 
@@ -66,56 +62,49 @@ export default function Onboarding() {
     }
   };
 
-  const validateCurrentStep = () => {
-    switch (currentStep) {
-      case 1:
-        if (!data.nom.trim()) {
-          Alert.alert('Information manquante', 'Veuillez saisir votre nom');
-          return false;
-        }
-        if (!data.prenom.trim()) {
-          Alert.alert('Information manquante', 'Veuillez saisir votre prénom');
-          return false;
-        }
-        return true;
-      case 2:
-        // Nom d'entreprise optionnel
-        return true;
-      case 3:
-        // Logo optionnel
-        return true;
-      case 4:
-        if (!data.secteurActivite) {
-          Alert.alert('Information manquante', 'Veuillez sélectionner votre secteur d\'activité');
-          return false;
-        }
-        return true;
-      default:
-        return true;
-    }
+  const handleLogoUpload = () => {
+    // Créer un input file invisible
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        setLogoFile(file);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setLogoPreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
   };
 
   const handleComplete = async () => {
-    if (!user) return;
+    if (!user) {
+      Alert.alert('Erreur', 'Utilisateur non connecté');
+      return;
+    }
 
     try {
       setLoading(true);
+
+      let logoUrl = '';
+      if (logoFile) {
+        logoUrl = await onboardingService.uploadLogo(user.id, logoFile);
+      }
+
+      const onboardingData: OnboardingData = {
+        ...formData,
+        logo_url: logoUrl
+      };
+
+      await onboardingService.completeOnboarding(user.id, onboardingData);
       
-      // Sauvegarder les informations du profil
-      await onboardingService.completeOnboarding(user.id, {
-        nom: data.nom.trim(),
-        prenom: data.prenom.trim(),
-        nom_entreprise: data.nomEntreprise.trim() || null,
-        logo_url: data.logoUrl || null,
-        activite_principale: data.secteurActivite
-      });
-
-      // Mettre à jour le contexte d'authentification
-      await updateProfile();
-
       Alert.alert(
         'Bienvenue !',
-        'Votre profil a été configuré avec succès. Vous pouvez maintenant découvrir MiniBizz.',
+        'Votre profil a été configuré avec succès. Vous pouvez maintenant utiliser toutes les fonctionnalités de MiniBizz.',
         [
           {
             text: 'Commencer',
@@ -124,269 +113,193 @@ export default function Onboarding() {
         ]
       );
     } catch (error) {
-      console.error('Erreur lors de la finalisation:', error);
-      Alert.alert('Erreur', 'Impossible de sauvegarder votre profil. Veuillez réessayer.');
+      console.error('Erreur onboarding:', error);
+      Alert.alert('Erreur', 'Impossible de finaliser la configuration. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSkip = () => {
-    Alert.alert(
-      'Passer l\'onboarding',
-      'Vous pourrez compléter ces informations plus tard dans les paramètres.',
-      [
-        { text: 'Continuer l\'onboarding', style: 'cancel' },
-        {
-          text: 'Passer',
-          onPress: () => router.replace('/(tabs)')
-        }
-      ]
-    );
-  };
-
-  const renderProgressBar = () => (
-    <View style={styles.progressContainer}>
-      <View style={styles.progressBar}>
-        <View 
-          style={[
-            styles.progressFill, 
-            { width: `${(currentStep / totalSteps) * 100}%` }
-          ]} 
-        />
-      </View>
-      <Text style={styles.progressText}>
-        Étape {currentStep} sur {totalSteps}
-      </Text>
-    </View>
-  );
-
-  const renderStep1 = () => (
-    <View style={styles.stepContainer}>
-      <View style={styles.stepHeader}>
-        <View style={styles.stepIcon}>
-          <User size={32} color="#2563eb" />
-        </View>
-        <Text style={styles.stepTitle}>Informations personnelles</Text>
-        <Text style={styles.stepDescription}>
-          Commençons par vos informations de base
-        </Text>
-      </View>
-
-      <View style={styles.formContainer}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Prénom *</Text>
-          <TextInput
-            style={styles.input}
-            value={data.prenom}
-            onChangeText={(text) => setData({...data, prenom: text})}
-            placeholder="Votre prénom"
-            autoCapitalize="words"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Nom *</Text>
-          <TextInput
-            style={styles.input}
-            value={data.nom}
-            onChangeText={(text) => setData({...data, nom: text})}
-            placeholder="Votre nom de famille"
-            autoCapitalize="words"
-          />
-        </View>
-
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            Ces informations apparaîtront sur vos documents professionnels (devis, factures).
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderStep2 = () => (
-    <View style={styles.stepContainer}>
-      <View style={styles.stepHeader}>
-        <View style={styles.stepIcon}>
-          <Building size={32} color="#2563eb" />
-        </View>
-        <Text style={styles.stepTitle}>Votre entreprise</Text>
-        <Text style={styles.stepDescription}>
-          Donnez un nom à votre activité (optionnel)
-        </Text>
-      </View>
-
-      <View style={styles.formContainer}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Nom de votre auto-entreprise</Text>
-          <TextInput
-            style={styles.input}
-            value={data.nomEntreprise}
-            onChangeText={(text) => setData({...data, nomEntreprise: text})}
-            placeholder="Ex: Dupont Consulting, Martin Design..."
-            autoCapitalize="words"
-          />
-          <Text style={styles.helperText}>
-            Laissez vide si vous préférez utiliser votre nom personnel
-          </Text>
-        </View>
-
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            💡 Vous pourrez toujours modifier ce nom plus tard dans vos paramètres.
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderStep3 = () => (
-    <View style={styles.stepContainer}>
-      <View style={styles.stepHeader}>
-        <View style={styles.stepIcon}>
-          <Upload size={32} color="#2563eb" />
-        </View>
-        <Text style={styles.stepTitle}>Logo professionnel</Text>
-        <Text style={styles.stepDescription}>
-          Ajoutez votre logo pour personnaliser vos documents (optionnel)
-        </Text>
-      </View>
-
-      <View style={styles.formContainer}>
-        <TouchableOpacity style={styles.uploadArea}>
-          {data.logoUrl ? (
-            <View style={styles.logoPreview}>
-              <Image source={{ uri: data.logoUrl }} style={styles.logoImage} />
-              <Text style={styles.logoText}>Logo sélectionné</Text>
-            </View>
-          ) : (
-            <View style={styles.uploadContent}>
-              <Upload size={48} color="#9ca3af" />
-              <Text style={styles.uploadText}>Cliquez pour ajouter votre logo</Text>
-              <Text style={styles.uploadSubtext}>
-                Formats acceptés: PNG, JPG (max 2MB)
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {data.logoUrl && (
-          <TouchableOpacity 
-            style={styles.removeButton}
-            onPress={() => setData({...data, logoUrl: ''})}
-          >
-            <Text style={styles.removeText}>Supprimer le logo</Text>
-          </TouchableOpacity>
-        )}
-
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            📄 Votre logo apparaîtra sur vos devis, factures et documents officiels.
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderStep4 = () => (
-    <View style={styles.stepContainer}>
-      <View style={styles.stepHeader}>
-        <View style={styles.stepIcon}>
-          <Briefcase size={32} color="#2563eb" />
-        </View>
-        <Text style={styles.stepTitle}>Secteur d'activité</Text>
-        <Text style={styles.stepDescription}>
-          Sélectionnez votre domaine d'expertise principal
-        </Text>
-      </View>
-
-      <View style={styles.formContainer}>
-        <ScrollView style={styles.sectorsContainer} showsVerticalScrollIndicator={false}>
-          {SECTEURS_ACTIVITE.map((secteur, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.sectorItem,
-                data.secteurActivite === secteur && styles.sectorItemSelected
-              ]}
-              onPress={() => setData({...data, secteurActivite: secteur})}
-            >
-              <Text style={[
-                styles.sectorText,
-                data.secteurActivite === secteur && styles.sectorTextSelected
-              ]}>
-                {secteur}
-              </Text>
-              {data.secteurActivite === secteur && (
-                <Check size={20} color="#2563eb" />
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            🎯 Cette information nous aide à personnaliser votre expérience et vous proposer des contenus adaptés.
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderCurrentStep = () => {
+  const renderStep = () => {
     switch (currentStep) {
-      case 1: return renderStep1();
-      case 2: return renderStep2();
-      case 3: return renderStep3();
-      case 4: return renderStep4();
-      default: return renderStep1();
+      case 1:
+        return (
+          <View style={styles.stepContent}>
+            <View style={styles.stepHeader}>
+              <User size={32} color="#2563eb" />
+              <Text style={styles.stepTitle}>Informations personnelles</Text>
+              <Text style={styles.stepDescription}>
+                Commençons par vos informations de base
+              </Text>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Prénom *</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.prenom}
+                onChangeText={(text) => setFormData({...formData, prenom: text})}
+                placeholder="Votre prénom"
+                autoCapitalize="words"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Nom *</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.nom}
+                onChangeText={(text) => setFormData({...formData, nom: text})}
+                placeholder="Votre nom de famille"
+                autoCapitalize="words"
+              />
+            </View>
+          </View>
+        );
+
+      case 2:
+        return (
+          <View style={styles.stepContent}>
+            <View style={styles.stepHeader}>
+              <Building size={32} color="#2563eb" />
+              <Text style={styles.stepTitle}>Nom de votre entreprise</Text>
+              <Text style={styles.stepDescription}>
+                Comment souhaitez-vous nommer votre auto-entreprise ? (optionnel)
+              </Text>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Nom d'entreprise</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.nom_entreprise}
+                onChangeText={(text) => setFormData({...formData, nom_entreprise: text})}
+                placeholder="Ex: JD Consulting, Martin Services..."
+                autoCapitalize="words"
+              />
+              <Text style={styles.helperText}>
+                Vous pourrez modifier ce nom à tout moment dans les paramètres
+              </Text>
+            </View>
+          </View>
+        );
+
+      case 3:
+        return (
+          <View style={styles.stepContent}>
+            <View style={styles.stepHeader}>
+              <Upload size={32} color="#2563eb" />
+              <Text style={styles.stepTitle}>Logo de votre entreprise</Text>
+              <Text style={styles.stepDescription}>
+                Ajoutez un logo pour personnaliser vos documents (optionnel)
+              </Text>
+            </View>
+
+            <View style={styles.logoUploadContainer}>
+              {logoPreview ? (
+                <View style={styles.logoPreview}>
+                  <Image source={{ uri: logoPreview }} style={styles.logoImage} />
+                  <TouchableOpacity style={styles.changeLogoButton} onPress={handleLogoUpload}>
+                    <Text style={styles.changeLogoText}>Changer le logo</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.uploadButton} onPress={handleLogoUpload}>
+                  <Upload size={24} color="#6b7280" />
+                  <Text style={styles.uploadText}>Télécharger un logo</Text>
+                  <Text style={styles.uploadSubtext}>PNG, JPG jusqu'à 2MB</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        );
+
+      case 4:
+        return (
+          <View style={styles.stepContent}>
+            <View style={styles.stepHeader}>
+              <Briefcase size={32} color="#2563eb" />
+              <Text style={styles.stepTitle}>Secteur d'activité</Text>
+              <Text style={styles.stepDescription}>
+                Sélectionnez votre domaine d'activité principal
+              </Text>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Activité principale *</Text>
+              <View style={styles.selectContainer}>
+                <select
+                  style={styles.select}
+                  value={formData.activite_principale}
+                  onChange={(e) => setFormData({...formData, activite_principale: e.target.value})}
+                >
+                  <option value="">Sélectionnez votre activité</option>
+                  {ACTIVITES_PROFESSIONNELLES.map((activite) => (
+                    <option key={activite} value={activite}>
+                      {activite}
+                    </option>
+                  ))}
+                </select>
+              </View>
+            </View>
+          </View>
+        );
+
+      default:
+        return null;
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={currentStep === 1 ? handleSkip : handlePrevious}
-        >
-          <ChevronLeft size={24} color="#6b7280" />
-        </TouchableOpacity>
-        
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Configuration du profil</Text>
-          <TouchableOpacity onPress={handleSkip}>
-            <Text style={styles.skipText}>Passer</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {/* Progress Bar */}
-      {renderProgressBar()}
+      <View style={styles.progressContainer}>
+        <View style={styles.progressBar}>
+          <View 
+            style={[
+              styles.progressFill, 
+              { width: `${(currentStep / totalSteps) * 100}%` }
+            ]} 
+          />
+        </View>
+        <Text style={styles.progressText}>
+          Étape {currentStep} sur {totalSteps}
+        </Text>
+      </View>
 
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {renderCurrentStep()}
+        <View style={styles.header}>
+          <Text style={styles.title}>Configuration de votre profil</Text>
+          <Text style={styles.subtitle}>
+            Quelques informations pour personnaliser votre expérience
+          </Text>
+        </View>
+
+        {renderStep()}
       </ScrollView>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
+      {/* Navigation */}
+      <View style={styles.navigation}>
+        {currentStep > 1 && (
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handlePrevious}
+            disabled={loading}
+          >
+            <Text style={styles.backButtonText}>Précédent</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity 
+          style={[styles.nextButton, loading && styles.nextButtonDisabled]}
           onPress={handleNext}
           disabled={loading}
         >
-          <Text style={styles.primaryButtonText}>
-            {loading ? 'Finalisation...' : currentStep === totalSteps ? 'Terminer' : 'Continuer'}
+          <Text style={styles.nextButtonText}>
+            {loading ? 'Finalisation...' : currentStep === totalSteps ? 'Terminer' : 'Suivant'}
           </Text>
-          {currentStep < totalSteps && (
-            <ChevronRight size={20} color="#ffffff" />
-          )}
-          {currentStep === totalSteps && (
-            <Star size={20} color="#ffffff" />
-          )}
+          {!loading && <ArrowRight size={16} color="#ffffff" />}
         </TouchableOpacity>
       </View>
     </View>
@@ -398,56 +311,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f9fafb',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-    backgroundColor: '#ffffff',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerContent: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginLeft: 16,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  skipText: {
-    fontSize: 16,
-    color: '#6b7280',
-    fontWeight: '500',
-  },
   progressContainer: {
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingTop: 60,
+    paddingBottom: 20,
     backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
   },
   progressBar: {
-    height: 8,
+    height: 4,
     backgroundColor: '#e5e7eb',
-    borderRadius: 4,
+    borderRadius: 2,
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#2563eb',
-    borderRadius: 4,
+    borderRadius: 2,
   },
   progressText: {
     fontSize: 14,
@@ -456,165 +335,167 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingHorizontal: 24,
   },
-  stepContainer: {
-    padding: 24,
-  },
-  stepHeader: {
+  header: {
     alignItems: 'center',
-    marginBottom: 32,
+    paddingVertical: 32,
   },
-  stepIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#eff6ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  stepTitle: {
-    fontSize: 24,
+  title: {
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#111827',
     marginBottom: 8,
-    textAlign: 'center',
   },
-  stepDescription: {
+  subtitle: {
     fontSize: 16,
     color: '#6b7280',
     textAlign: 'center',
-    lineHeight: 24,
   },
-  formContainer: {
-    gap: 20,
+  stepContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  inputGroup: {
-    gap: 8,
+  stepHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  stepTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  stepDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  formGroup: {
+    marginBottom: 20,
   },
   label: {
     fontSize: 16,
     fontWeight: '500',
     color: '#374151',
+    marginBottom: 8,
   },
   input: {
     borderWidth: 1,
     borderColor: '#d1d5db',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderRadius: 8,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
     color: '#111827',
     backgroundColor: '#ffffff',
   },
   helperText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#6b7280',
+    marginTop: 4,
   },
-  uploadArea: {
+  selectContainer: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+  },
+  select: {
+    width: '100%',
+    padding: 12,
+    fontSize: 16,
+    border: 'none',
+    outline: 'none',
+    backgroundColor: 'transparent',
+  },
+  logoUploadContainer: {
+    alignItems: 'center',
+  },
+  uploadButton: {
     borderWidth: 2,
     borderColor: '#d1d5db',
     borderStyle: 'dashed',
     borderRadius: 12,
     padding: 32,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-  },
-  uploadContent: {
-    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    width: '100%',
   },
   uploadText: {
     fontSize: 16,
     fontWeight: '500',
     color: '#374151',
-    marginTop: 12,
+    marginTop: 8,
   },
   uploadSubtext: {
-    fontSize: 14,
-    color: '#9ca3af',
+    fontSize: 12,
+    color: '#6b7280',
     marginTop: 4,
   },
   logoPreview: {
     alignItems: 'center',
   },
   logoImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginBottom: 12,
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    marginBottom: 16,
   },
-  logoText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#16a34a',
-  },
-  removeButton: {
-    alignSelf: 'center',
-    paddingVertical: 8,
+  changeLogoButton: {
+    backgroundColor: '#eff6ff',
     paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  removeText: {
+  changeLogoText: {
     fontSize: 14,
-    color: '#dc2626',
     fontWeight: '500',
+    color: '#2563eb',
   },
-  sectorsContainer: {
-    maxHeight: 300,
-  },
-  sectorItem: {
+  navigation: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  sectorItemSelected: {
-    borderColor: '#2563eb',
-    backgroundColor: '#eff6ff',
-  },
-  sectorText: {
-    fontSize: 16,
-    color: '#374151',
-  },
-  sectorTextSelected: {
-    color: '#2563eb',
-    fontWeight: '500',
-  },
-  infoBox: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#1e40af',
-    lineHeight: 20,
-  },
-  footer: {
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
   },
-  button: {
+  backButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  nextButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
     gap: 8,
   },
-  primaryButton: {
-    backgroundColor: '#2563eb',
+  nextButtonDisabled: {
+    opacity: 0.5,
   },
-  primaryButtonText: {
+  nextButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',

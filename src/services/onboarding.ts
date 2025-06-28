@@ -1,130 +1,149 @@
 import { supabase } from '../lib/supabase';
+import type { Database } from '../lib/supabase';
 
-interface OnboardingData {
+type Profile = Database['public']['Tables']['profiles']['Row'];
+
+export interface OnboardingData {
   nom: string;
   prenom: string;
-  nom_entreprise?: string | null;
-  logo_url?: string | null;
+  nom_entreprise?: string;
   activite_principale: string;
+  logo_url?: string;
 }
 
 export const onboardingService = {
-  // Compléter l'onboarding d'un utilisateur
-  async completeOnboarding(userId: string, data: OnboardingData) {
-    try {
-      // Mettre à jour le profil utilisateur
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          nom: data.nom,
-          prenom: data.prenom,
-          activite_principale: data.activite_principale,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
+  // Récupérer le profil utilisateur avec le statut d'onboarding
+  async getProfile(userId: string): Promise<Profile | null> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('nom, prenom, activite_principale, onboarding_completed')
+      .eq('id', userId)
+      .single();
 
-      if (profileError) throw profileError;
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
 
-      // Créer ou mettre à jour les paramètres d'entreprise
-      const { error: entrepriseError } = await supabase
+    return data;
+  },
+
+  // Compléter l'onboarding
+  async completeOnboarding(userId: string, onboardingData: OnboardingData): Promise<void> {
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: userId,
+        email: '', // Will be updated by trigger or separate call
+        nom: onboardingData.nom,
+        prenom: onboardingData.prenom,
+        activite_principale: onboardingData.activite_principale,
+        logo_url: onboardingData.logo_url,
+        onboarding_completed: true,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'id'
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    // Créer les paramètres d'entreprise si un nom d'entreprise est fourni
+    if (onboardingData.nom_entreprise) {
+      await supabase
         .from('parametres_entreprise')
         .upsert({
           user_id: userId,
-          nom_entreprise: data.nom_entreprise,
-          logo_url: data.logo_url,
-          updated_at: new Date().toISOString()
+          nom_entreprise: onboardingData.nom_entreprise,
+          logo_url: onboardingData.logo_url
+        }, {
+          onConflict: 'user_id'
         });
+    }
+  },
 
-      if (entrepriseError) throw entrepriseError;
+  // Vérifier si l'onboarding est complété
+  async isOnboardingCompleted(userId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('onboarding_completed')
+      .eq('id', userId)
+      .single();
 
-      // Marquer l'onboarding comme terminé (on peut ajouter un champ dans profiles si nécessaire)
-      const { error: onboardingError } = await supabase
-        .from('profiles')
-        .update({
-          onboarding_completed: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
-      if (onboardingError) {
-        console.warn('Impossible de marquer l\'onboarding comme terminé:', onboardingError);
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Erreur lors de l\'onboarding:', error);
+    if (error && error.code !== 'PGRST116') {
       throw error;
     }
+
+    return data?.onboarding_completed || false;
   },
 
-  // Vérifier si l'onboarding est nécessaire
-  async needsOnboarding(userId: string): Promise<boolean> {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('nom, prenom, activite_principale, onboarding_completed')
-        .eq('id', userId)
-        .single();
+  // Télécharger un logo
+  async uploadLogo(userId: string, file: File): Promise<string> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/logo.${fileExt}`;
 
-      if (error) throw error;
+    const { error: uploadError } = await supabase.storage
+      .from('logos')
+      .upload(fileName, file, {
+        upsert: true
+      });
 
-      // L'onboarding est nécessaire si :
-      // - onboarding_completed est false/null
-      // - OU nom/prenom/activite_principale sont manquants
-      return !data.onboarding_completed || 
-             !data.nom || 
-             !data.prenom || 
-             !data.activite_principale;
-    } catch (error) {
-      console.error('Erreur lors de la vérification de l\'onboarding:', error);
-      return true; // En cas d'erreur, on assume que l'onboarding est nécessaire
+    if (uploadError) {
+      throw uploadError;
     }
-  },
 
-  // Sauvegarder temporairement les données d'onboarding
-  async saveOnboardingProgress(userId: string, step: number, data: Partial<OnboardingData>) {
-    try {
-      // On peut utiliser localStorage ou une table temporaire
-      if (typeof window !== 'undefined') {
-        const progressKey = `onboarding_progress_${userId}`;
-        const progress = {
-          step,
-          data,
-          timestamp: new Date().toISOString()
-        };
-        localStorage.setItem(progressKey, JSON.stringify(progress));
-      }
-    } catch (error) {
-      console.warn('Impossible de sauvegarder le progrès de l\'onboarding:', error);
-    }
-  },
+    const { data } = supabase.storage
+      .from('logos')
+      .getPublicUrl(fileName);
 
-  // Récupérer le progrès de l'onboarding
-  async getOnboardingProgress(userId: string) {
-    try {
-      if (typeof window !== 'undefined') {
-        const progressKey = `onboarding_progress_${userId}`;
-        const saved = localStorage.getItem(progressKey);
-        if (saved) {
-          return JSON.parse(saved);
-        }
-      }
-      return null;
-    } catch (error) {
-      console.warn('Impossible de récupérer le progrès de l\'onboarding:', error);
-      return null;
-    }
-  },
-
-  // Nettoyer le progrès de l'onboarding après completion
-  async clearOnboardingProgress(userId: string) {
-    try {
-      if (typeof window !== 'undefined') {
-        const progressKey = `onboarding_progress_${userId}`;
-        localStorage.removeItem(progressKey);
-      }
-    } catch (error) {
-      console.warn('Impossible de nettoyer le progrès de l\'onboarding:', error);
-    }
+    return data.publicUrl;
   }
 };
+
+// Liste des activités professionnelles
+export const ACTIVITES_PROFESSIONNELLES = [
+  'Développement web',
+  'Développement mobile',
+  'Design graphique',
+  'Rédaction web',
+  'Marketing digital',
+  'Conseil en informatique',
+  'Formation',
+  'Photographie',
+  'Vidéographie',
+  'Architecture',
+  'Comptabilité',
+  'Juridique',
+  'Traduction',
+  'Coaching',
+  'Consulting',
+  'E-commerce',
+  'Artisanat',
+  'Restauration',
+  'Services à la personne',
+  'Nettoyage',
+  'Jardinage',
+  'Bricolage',
+  'Transport',
+  'Livraison',
+  'Immobilier',
+  'Assurance',
+  'Santé',
+  'Bien-être',
+  'Sport',
+  'Musique',
+  'Art',
+  'Événementiel',
+  'Communication',
+  'Relations publiques',
+  'Vente',
+  'Commerce',
+  'Import/Export',
+  'Logistique',
+  'Maintenance',
+  'Réparation',
+  'Installation',
+  'Sécurité',
+  'Surveillance',
+  'Autre'
+].sort();
