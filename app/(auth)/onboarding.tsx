@@ -415,7 +415,8 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     border: 'none',
-    outline: 'none',
+    outlineWidth: 0,
+    outlineStyle: 'none',
     backgroundColor: 'transparent',
   },
   logoUploadContainer: {
