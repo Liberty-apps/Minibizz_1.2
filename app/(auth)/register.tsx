@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { FileText, Mail, Lock, CircleAlert as AlertCircle, CircleCheck as CheckCircle } from 'lucide-react-native';
+import { FileText, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react-native';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -121,16 +121,14 @@ export default function Register() {
             </Text>
           </TouchableOpacity>
 
-          {Platform.OS === 'web' && (
-            <View style={styles.linkContainer}>
-              <Text style={styles.linkText}>
-                Déjà un compte ?{' '}
-                <Link href="/(auth)/login" style={styles.link}>
-                  Se connecter
-                </Link>
-              </Text>
-            </View>
-          )}
+          <View style={styles.linkContainer}>
+            <Text style={styles.linkText}>
+              Déjà un compte ?{' '}
+              <Link href="/(auth)/login" style={styles.link}>
+                Se connecter
+              </Link>
+            </Text>
+          </View>
         </View>
       </View>
     </View>
