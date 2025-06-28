@@ -8,6 +8,7 @@ import {
   AuthError
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { App as CapApp } from '@capacitor/app';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -96,6 +97,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await signOut(auth);
       console.log('Déconnexion réussie');
+      
+      // Si on est dans un environnement Capacitor, on peut gérer la déconnexion différemment
+      if ((window as any).Capacitor) {
+        // Rediriger vers la page de login
+        window.location.href = '/login';
+      }
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
       throw new Error('Erreur lors de la déconnexion.');
@@ -118,7 +125,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    return unsubscribe;
+    // Gestion de l'état de l'application sur les plateformes mobiles
+    if ((window as any).Capacitor) {
+      CapApp.addListener('appStateChange', ({ isActive }) => {
+        console.log('App state changed. Is active?', isActive);
+        // Vous pouvez ajouter ici une logique pour rafraîchir les données quand l'app revient au premier plan
+      });
+    }
+
+    return () => {
+      unsubscribe();
+      if ((window as any).Capacitor) {
+        CapApp.removeAllListeners();
+      }
+    };
   }, []);
 
   const value = {
