@@ -2,10 +2,14 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { defineCustomElements } from '@ionic/pwa-elements/loader';
+import { Platform } from 'react-native';
 
-// Appel de cette fonction pour charger les éléments PWA
-defineCustomElements(window);
+// Only load PWA elements on web
+if (Platform.OS === 'web') {
+  import('@ionic/pwa-elements/loader').then(({ defineCustomElements }) => {
+    defineCustomElements(window);
+  });
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

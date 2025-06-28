@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FileText, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Platform } from 'react-native';
 
 const Register: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -14,8 +15,8 @@ const Register: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Vérifier si on est dans un environnement Capacitor
-    setIsNative(!!(window as any).Capacitor);
+    // Check if we're running on a native platform
+    setIsNative(Platform.OS !== 'web');
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

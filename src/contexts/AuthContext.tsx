@@ -8,7 +8,8 @@ import {
   AuthError
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { App as CapApp } from '@capacitor/app';
+import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -98,10 +99,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await signOut(auth);
       console.log('Déconnexion réussie');
       
-      // Si on est dans un environnement Capacitor, on peut gérer la déconnexion différemment
-      if ((window as any).Capacitor) {
-        // Rediriger vers la page de login
+      // Handle logout for different platforms
+      if (Platform.OS === 'web') {
         window.location.href = '/login';
+      } else {
+        // For mobile, navigation will be handled by the router
       }
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
@@ -125,20 +127,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Gestion de l'état de l'application sur les plateformes mobiles
-    if ((window as any).Capacitor) {
-      CapApp.addListener('appStateChange', ({ isActive }) => {
-        console.log('App state changed. Is active?', isActive);
-        // Vous pouvez ajouter ici une logique pour rafraîchir les données quand l'app revient au premier plan
+    // Handle deep linking for mobile apps
+    if (Platform.OS !== 'web') {
+      const handleDeepLink = (url: string) => {
+        console.log('Deep link received:', url);
+        // Handle authentication redirects or other deep links
+      };
+
+      const subscription = Linking.addEventListener('url', ({ url }) => {
+        handleDeepLink(url);
       });
+
+      return () => {
+        unsubscribe();
+        subscription?.remove();
+      };
     }
 
-    return () => {
-      unsubscribe();
-      if ((window as any).Capacitor) {
-        CapApp.removeAllListeners();
-      }
-    };
+    return unsubscribe;
   }, []);
 
   const value = {

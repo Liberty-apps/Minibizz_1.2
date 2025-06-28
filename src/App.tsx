@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
@@ -13,32 +14,28 @@ import ActualitesEmplois from './pages/ActualitesEmplois';
 import Aide from './pages/Aide';
 import Legal from './pages/Legal';
 import Parametres from './pages/Parametres';
-import { useEffect } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
+import { Platform } from 'react-native';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 function App() {
   useEffect(() => {
-    // Gestion du bouton retour sur Android
+    // Hide splash screen after app is ready
+    const hideSplashScreen = async () => {
+      await SplashScreen.hideAsync();
+    };
+
+    // Gestion du bouton retour sur Android avec Expo
     const handleBackButton = () => {
-      // Vérifier si on est dans un environnement Capacitor
-      if ((window as any).Capacitor) {
-        const { App: CapApp } = (window as any).Capacitor;
-        CapApp.addListener('backButton', ({ canGoBack }: { canGoBack: boolean }) => {
-          if (canGoBack) {
-            window.history.back();
-          } else {
-            // Demander confirmation avant de quitter l'app
-            if (confirm('Voulez-vous quitter l\'application ?')) {
-              CapApp.exitApp();
-            }
-          }
-        });
-        
-        return () => {
-          CapApp.removeAllListeners();
-        };
+      if (Platform.OS === 'android') {
+        // Expo handles back button automatically for navigation
+        // Custom logic can be added here if needed
       }
     };
 
+    hideSplashScreen();
     handleBackButton();
   }, []);
 
