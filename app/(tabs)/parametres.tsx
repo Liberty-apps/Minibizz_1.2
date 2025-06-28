@@ -1,15 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch } from 'react-native';
-import { 
-  Settings, 
-  User, 
-  Building, 
-  Bell,
-  Shield,
-  HelpCircle,
-  ChevronRight,
-  Save
-} from 'lucide-react-native';
+import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save } from 'lucide-react-native';
 
 export default function Parametres() {
   const [notifications, setNotifications] = useState(true);

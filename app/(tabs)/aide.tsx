@@ -1,15 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { 
-  HelpCircle, 
-  ChevronDown, 
-  ChevronRight,
-  Mail,
-  Phone,
-  MessageCircle,
-  Book,
-  ExternalLink
-} from 'lucide-react-native';
+import { CircleHelp as HelpCircle, ChevronDown, ChevronRight, Mail, Phone, MessageCircle, Book, ExternalLink } from 'lucide-react-native';
 
 export default function Aide() {
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
