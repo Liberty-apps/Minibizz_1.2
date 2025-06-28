@@ -1,17 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
-import { 
-  Globe, 
-  Plus, 
-  Eye, 
-  Edit3, 
-  Settings, 
-  Trash2,
-  ExternalLink,
-  Palette,
-  Layout,
-  Image as ImageIcon
-} from 'lucide-react-native';
+import { Globe, Plus, Eye, CreditCard as Edit3, Settings, Trash2, ExternalLink, Palette, LayoutGrid as Layout, Image as ImageIcon } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { sitesService } from '../../src/services/sites';
 
