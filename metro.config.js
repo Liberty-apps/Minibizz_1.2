@@ -2,11 +2,15 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// Configuration pour React Native Web
+// Configuration spécifique pour React Native Web
 config.resolver.alias = {
-  'react-native': 'react-native-web',
+  'react-native$': 'react-native-web',
+  'react-native/Libraries/EventEmitter/NativeEventEmitter$': 'react-native-web/dist/vendor/react-native/NativeEventEmitter',
+  'react-native/Libraries/vendor/emitter/EventEmitter$': 'react-native-web/dist/vendor/react-native/emitter/EventEmitter',
+  'react-native/Libraries/EventEmitter/RCTDeviceEventEmitter$': 'react-native-web/dist/vendor/react-native/NativeEventEmitter',
 };
 
+// Extensions de fichiers pour le web
 config.resolver.extensions = [
   '.web.js',
   '.web.jsx',
@@ -19,7 +23,7 @@ config.resolver.extensions = [
   '.json',
 ];
 
-// Optimisations Metro pour de meilleures performances
+// Plateformes supportées
 config.resolver.platforms = ['native', 'web', 'ios', 'android'];
 
 // Configuration pour le tree-shaking
@@ -41,5 +45,8 @@ config.transformer.minifierConfig = {
 
 // Optimisation des assets
 config.transformer.assetPlugins = ['expo-asset/tools/hashAssetFiles'];
+
+// Configuration pour éviter les erreurs de résolution
+config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
 
 module.exports = config;
