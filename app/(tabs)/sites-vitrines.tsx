@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { Globe, Plus, Eye, CreditCard as Edit3, Settings, Trash2, ExternalLink, Palette, LayoutGrid as Layout, Image as ImageIcon, Search } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { sitesService } from '../../src/services/sites';
+import { useSubscription } from '../../src/contexts/SubscriptionContext';
+import PremiumFeature from '../../components/PremiumFeature';
 
 interface SiteVitrine {
   id: string;
@@ -25,6 +27,7 @@ interface Template {
 
 export default function SitesVitrines() {
   const { user } = useAuth();
+  const { hasAccess } = useSubscription();
   const [sites, setSites] = useState<SiteVitrine[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -33,6 +36,8 @@ export default function SitesVitrines() {
   const [sousdomaine, setSousdomaine] = useState('');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const hasFeatureAccess = hasAccess('sites-vitrines');
 
   useEffect(() => {
     if (user) {
@@ -215,268 +220,265 @@ export default function SitesVitrines() {
     );
   }
 
-  if (loading && sites.length === 0) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Globe size={48} color="#2563eb" />
-        <Text style={styles.loadingText}>Chargement...</Text>
-      </View>
-    );
-  }
-
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Sites Vitrines</Text>
-          <Text style={styles.subtitle}>
-            Créez et gérez vos mini-sites professionnels
-          </Text>
-        </View>
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => setShowCreateModal(true)}
-        >
-          <Plus size={20} color="#ffffff" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Search */}
-      {sites.length > 0 && (
-        <View style={styles.searchContainer}>
-          <View style={styles.searchBox}>
-            <Search size={20} color="#9ca3af" />
-            <TextInput
-              style={styles.searchInput}
-              value={searchTerm}
-              onChangeText={setSearchTerm}
-              placeholder="Rechercher un site..."
-              placeholderTextColor="#9ca3af"
-            />
+    <PremiumFeature 
+      feature="sites-vitrines"
+      title="Sites Vitrines"
+      description="Créez facilement votre site vitrine professionnel pour présenter votre activité en ligne. Avec un éditeur simple, des templates prêts à l'emploi et un hébergement inclus."
+    >
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Sites Vitrines</Text>
+            <Text style={styles.subtitle}>
+              Créez et gérez vos mini-sites professionnels
+            </Text>
           </View>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => setShowCreateModal(true)}
+          >
+            <Plus size={20} color="#ffffff" />
+          </TouchableOpacity>
         </View>
-      )}
 
-      {/* Sites List */}
-      {filteredSites.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Globe size={64} color="#d1d5db" />
-          <Text style={styles.emptyTitle}>
-            {searchTerm ? 'Aucun site trouvé' : 'Aucun site créé'}
-          </Text>
-          <Text style={styles.emptyText}>
-            {searchTerm 
-              ? 'Essayez avec d\'autres mots-clés'
-              : 'Créez votre premier site vitrine pour présenter votre activité en ligne'
-            }
-          </Text>
-          {!searchTerm && (
-            <TouchableOpacity 
-              style={styles.createFirstButton}
-              onPress={() => setShowCreateModal(true)}
-            >
-              <Text style={styles.createFirstText}>Créer mon premier site</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      ) : (
-        <View style={styles.sitesContainer}>
-          {filteredSites.map((site) => (
-            <View key={site.id} style={styles.siteCard}>
-              <View style={styles.siteHeader}>
-                <View style={styles.siteInfo}>
-                  <Text style={styles.siteName}>{site.nom}</Text>
-                  <Text style={styles.siteUrl}>
-                    {site.domaine_personnalise || `${site.sous_domaine}.minibizz.fr`}
-                  </Text>
-                  <View style={styles.statusContainer}>
-                    <View style={[
-                      styles.statusBadge, 
-                      { backgroundColor: getStatusColor(site.statut) }
-                    ]}>
-                      <Text style={styles.statusText}>
-                        {getStatusText(site.statut)}
-                      </Text>
-                    </View>
-                    <Text style={styles.lastUpdate}>
-                      Modifié le {new Date(site.updated_at).toLocaleDateString('fr-FR')}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.siteActions}>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() => Alert.alert('Aperçu', 'Fonctionnalité en cours de développement')}
-                  >
-                    <Eye size={18} color="#6b7280" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() => Alert.alert('Édition', 'Fonctionnalité en cours de développement')}
-                  >
-                    <Edit3 size={18} color="#6b7280" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() => Alert.alert('Paramètres', 'Fonctionnalité en cours de développement')}
-                  >
-                    <Settings size={18} color="#6b7280" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={() => handleDeleteSite(site.id, site.nom)}
-                  >
-                    <Trash2 size={18} color="#dc2626" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.siteFooter}>
-                <TouchableOpacity 
-                  style={[
-                    styles.publishButton,
-                    { backgroundColor: site.statut === 'publie' ? '#fef2f2' : '#f0fdf4' }
-                  ]}
-                  onPress={() => handlePublishSite(site.id, site.statut)}
-                >
-                  <Text style={[
-                    styles.publishText,
-                    { color: site.statut === 'publie' ? '#dc2626' : '#16a34a' }
-                  ]}>
-                    {site.statut === 'publie' ? 'Dépublier' : 'Publier'}
-                  </Text>
-                </TouchableOpacity>
-
-                {site.statut === 'publie' && (
-                  <TouchableOpacity 
-                    style={styles.visitButton}
-                    onPress={() => Alert.alert('Visite', 'Fonctionnalité en cours de développement')}
-                  >
-                    <ExternalLink size={16} color="#2563eb" />
-                    <Text style={styles.visitText}>Visiter</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Create Site Modal */}
-      {showCreateModal && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Créer un nouveau site</Text>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Nom du site *</Text>
+        {/* Search */}
+        {sites.length > 0 && (
+          <View style={styles.searchContainer}>
+            <View style={styles.searchBox}>
+              <Search size={20} color="#9ca3af" />
               <TextInput
-                style={styles.input}
-                value={siteName}
-                onChangeText={setSiteName}
-                placeholder="Mon entreprise"
+                style={styles.searchInput}
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+                placeholder="Rechercher un site..."
                 placeholderTextColor="#9ca3af"
               />
             </View>
+          </View>
+        )}
 
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Sous-domaine *</Text>
-              <View style={styles.urlInput}>
+        {/* Sites List */}
+        {filteredSites.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Globe size={64} color="#d1d5db" />
+            <Text style={styles.emptyTitle}>
+              {searchTerm ? 'Aucun site trouvé' : 'Aucun site créé'}
+            </Text>
+            <Text style={styles.emptyText}>
+              {searchTerm 
+                ? 'Essayez avec d\'autres mots-clés'
+                : 'Créez votre premier site vitrine pour présenter votre activité en ligne'
+              }
+            </Text>
+            {!searchTerm && (
+              <TouchableOpacity 
+                style={styles.createFirstButton}
+                onPress={() => setShowCreateModal(true)}
+              >
+                <Text style={styles.createFirstText}>Créer mon premier site</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <View style={styles.sitesContainer}>
+            {filteredSites.map((site) => (
+              <View key={site.id} style={styles.siteCard}>
+                <View style={styles.siteHeader}>
+                  <View style={styles.siteInfo}>
+                    <Text style={styles.siteName}>{site.nom}</Text>
+                    <Text style={styles.siteUrl}>
+                      {site.domaine_personnalise || `${site.sous_domaine}.minibizz.fr`}
+                    </Text>
+                    <View style={styles.statusContainer}>
+                      <View style={[
+                        styles.statusBadge, 
+                        { backgroundColor: getStatusColor(site.statut) }
+                      ]}>
+                        <Text style={styles.statusText}>
+                          {getStatusText(site.statut)}
+                        </Text>
+                      </View>
+                      <Text style={styles.lastUpdate}>
+                        Modifié le {new Date(site.updated_at).toLocaleDateString('fr-FR')}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.siteActions}>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => Alert.alert('Aperçu', 'Fonctionnalité en cours de développement')}
+                    >
+                      <Eye size={18} color="#6b7280" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => router.push(`/sites-vitrines/${site.id}/edit`)}
+                    >
+                      <Edit3 size={18} color="#6b7280" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => Alert.alert('Paramètres', 'Fonctionnalité en cours de développement')}
+                    >
+                      <Settings size={18} color="#6b7280" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => handleDeleteSite(site.id, site.nom)}
+                    >
+                      <Trash2 size={18} color="#dc2626" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.siteFooter}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.publishButton,
+                      { backgroundColor: site.statut === 'publie' ? '#fef2f2' : '#f0fdf4' }
+                    ]}
+                    onPress={() => handlePublishSite(site.id, site.statut)}
+                  >
+                    <Text style={[
+                      styles.publishText,
+                      { color: site.statut === 'publie' ? '#dc2626' : '#16a34a' }
+                    ]}>
+                      {site.statut === 'publie' ? 'Dépublier' : 'Publier'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {site.statut === 'publie' && (
+                    <TouchableOpacity 
+                      style={styles.visitButton}
+                      onPress={() => Alert.alert('Visite', 'Fonctionnalité en cours de développement')}
+                    >
+                      <ExternalLink size={16} color="#2563eb" />
+                      <Text style={styles.visitText}>Visiter</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Create Site Modal */}
+        {showCreateModal && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Créer un nouveau site</Text>
+              
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Nom du site *</Text>
                 <TextInput
-                  style={styles.subdomainInput}
-                  value={sousdomaine}
-                  onChangeText={(text) => setSousdomaine(text.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                  placeholder="monentreprise"
+                  style={styles.input}
+                  value={siteName}
+                  onChangeText={setSiteName}
+                  placeholder="Mon entreprise"
                   placeholderTextColor="#9ca3af"
                 />
-                <Text style={styles.urlSuffix}>.minibizz.fr</Text>
               </View>
-              <Text style={styles.helperText}>
-                Lettres minuscules, chiffres et tirets uniquement
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Sous-domaine *</Text>
+                <View style={styles.urlInput}>
+                  <TextInput
+                    style={styles.subdomainInput}
+                    value={sousdomaine}
+                    onChangeText={(text) => setSousdomaine(text.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="monentreprise"
+                    placeholderTextColor="#9ca3af"
+                  />
+                  <Text style={styles.urlSuffix}>.minibizz.fr</Text>
+                </View>
+                <Text style={styles.helperText}>
+                  Lettres minuscules, chiffres et tirets uniquement
+                </Text>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Template *</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.templatesContainer}>
+                    {templates.map((template) => (
+                      <TouchableOpacity
+                        key={template.id}
+                        style={[
+                          styles.templateCard,
+                          selectedTemplate === template.id && styles.templateCardSelected
+                        ]}
+                        onPress={() => setSelectedTemplate(template.id)}
+                      >
+                        <View style={styles.templatePreview}>
+                          <Layout size={32} color="#9ca3af" />
+                        </View>
+                        <Text style={styles.templateName}>{template.nom}</Text>
+                        <Text style={styles.templateDescription}>
+                          {template.description}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity 
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setShowCreateModal(false);
+                    setSiteName('');
+                    setSousdomaine('');
+                    setSelectedTemplate('');
+                  }}
+                >
+                  <Text style={styles.cancelText}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.createButton, loading && styles.createButtonDisabled]}
+                  onPress={handleCreateSite}
+                  disabled={loading}
+                >
+                  <Text style={styles.createText}>
+                    {loading ? 'Création...' : 'Créer le site'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Features Section */}
+        <View style={styles.featuresSection}>
+          <Text style={styles.featuresTitle}>Fonctionnalités incluses</Text>
+          <View style={styles.featuresGrid}>
+            <View style={styles.featureCard}>
+              <Palette size={24} color="#2563eb" />
+              <Text style={styles.featureTitle}>Personnalisation</Text>
+              <Text style={styles.featureText}>
+                Couleurs, polices et mise en page personnalisables
               </Text>
             </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Template *</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.templatesContainer}>
-                  {templates.map((template) => (
-                    <TouchableOpacity
-                      key={template.id}
-                      style={[
-                        styles.templateCard,
-                        selectedTemplate === template.id && styles.templateCardSelected
-                      ]}
-                      onPress={() => setSelectedTemplate(template.id)}
-                    >
-                      <View style={styles.templatePreview}>
-                        <Layout size={32} color="#9ca3af" />
-                      </View>
-                      <Text style={styles.templateName}>{template.nom}</Text>
-                      <Text style={styles.templateDescription}>
-                        {template.description}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
+            <View style={styles.featureCard}>
+              <ImageIcon size={24} color="#16a34a" />
+              <Text style={styles.featureTitle}>Galerie</Text>
+              <Text style={styles.featureText}>
+                Ajoutez vos photos et créez des galeries
+              </Text>
             </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={() => {
-                  setShowCreateModal(false);
-                  setSiteName('');
-                  setSousdomaine('');
-                  setSelectedTemplate('');
-                }}
-              >
-                <Text style={styles.cancelText}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.createButton, loading && styles.createButtonDisabled]}
-                onPress={handleCreateSite}
-                disabled={loading}
-              >
-                <Text style={styles.createText}>
-                  {loading ? 'Création...' : 'Créer le site'}
-                </Text>
-              </TouchableOpacity>
+            <View style={styles.featureCard}>
+              <Globe size={24} color="#9333ea" />
+              <Text style={styles.featureTitle}>Domaine</Text>
+              <Text style={styles.featureText}>
+                Sous-domaine gratuit ou domaine personnalisé
+              </Text>
             </View>
           </View>
         </View>
-      )}
-
-      {/* Features Section */}
-      <View style={styles.featuresSection}>
-        <Text style={styles.featuresTitle}>Fonctionnalités incluses</Text>
-        <View style={styles.featuresGrid}>
-          <View style={styles.featureCard}>
-            <Palette size={24} color="#2563eb" />
-            <Text style={styles.featureTitle}>Personnalisation</Text>
-            <Text style={styles.featureText}>
-              Couleurs, polices et mise en page personnalisables
-            </Text>
-          </View>
-          <View style={styles.featureCard}>
-            <ImageIcon size={24} color="#16a34a" />
-            <Text style={styles.featureTitle}>Galerie</Text>
-            <Text style={styles.featureText}>
-              Ajoutez vos photos et créez des galeries
-            </Text>
-          </View>
-          <View style={styles.featureCard}>
-            <Globe size={24} color="#9333ea" />
-            <Text style={styles.featureTitle}>Domaine</Text>
-            <Text style={styles.featureText}>
-              Sous-domaine gratuit ou domaine personnalisé
-            </Text>
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </PremiumFeature>
   );
 }
 
