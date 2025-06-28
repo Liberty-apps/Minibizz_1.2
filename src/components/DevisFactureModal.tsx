@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Save, CreditCard, Calendar, Percent, Euro } from 'lucide-react';
+import { X, Plus, Trash2, Save, CreditCard, Calendar, Percent } from 'lucide-react';
 import { Client, DevisItem, Devis, Facture, PaymentTerms, MODES_PAIEMENT, MODALITES_PAIEMENT } from '../types';
 import { getClients, saveDevis, saveFacture, generateDevisNumber, generateFactureNumber, getUserSettings } from '../utils/storage';
 import { formatCurrency } from '../utils/calculations';
@@ -338,7 +338,7 @@ const DevisFactureModal: React.FC<DevisFactureModalProps> = ({
                 </div>
 
                 <div className="space-y-3">
-                  {items.map((item, index) => (
+                  {items.map((item) => (
                     <div key={item.id} className="grid grid-cols-12 gap-3 items-center p-3 bg-gray-50 rounded-lg">
                       <div className="col-span-5">
                         <input

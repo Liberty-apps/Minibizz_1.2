@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
@@ -15,32 +14,32 @@ import Aide from './pages/Aide';
 import Legal from './pages/Legal';
 import Parametres from './pages/Parametres';
 import { useEffect } from 'react';
-import { App as CapApp } from '@capacitor/app';
 
 function App() {
   useEffect(() => {
     // Gestion du bouton retour sur Android
     const handleBackButton = () => {
-      CapApp.addListener('backButton', ({ canGoBack }) => {
-        if (canGoBack) {
-          window.history.back();
-        } else {
-          // Demander confirmation avant de quitter l'app
-          if (confirm('Voulez-vous quitter l\'application ?')) {
-            CapApp.exitApp();
+      // Vérifier si on est dans un environnement Capacitor
+      if ((window as any).Capacitor) {
+        const { App: CapApp } = (window as any).Capacitor;
+        CapApp.addListener('backButton', ({ canGoBack }: { canGoBack: boolean }) => {
+          if (canGoBack) {
+            window.history.back();
+          } else {
+            // Demander confirmation avant de quitter l'app
+            if (confirm('Voulez-vous quitter l\'application ?')) {
+              CapApp.exitApp();
+            }
           }
-        }
-      });
-      
-      return () => {
-        CapApp.removeAllListeners();
-      };
+        });
+        
+        return () => {
+          CapApp.removeAllListeners();
+        };
+      }
     };
 
-    // Vérifier si on est dans un environnement Capacitor
-    if ((window as any).Capacitor) {
-      handleBackButton();
-    }
+    handleBackButton();
   }, []);
 
   return (

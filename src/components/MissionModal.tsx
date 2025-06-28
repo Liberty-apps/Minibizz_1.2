@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Calendar, MapPin, Euro, Globe, Home } from 'lucide-react';
+import { X, Save, Calendar, MapPin, Globe } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Mission, DOMAINES } from '../types/mission';
 import { saveMission } from '../utils/missionStorage';
