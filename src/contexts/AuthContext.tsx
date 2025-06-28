@@ -8,7 +8,6 @@ interface AuthUser extends User {
   profile?: {
     nom?: string;
     prenom?: string;
-    onboarding_completed?: boolean;
   };
   name?: string;
 }
@@ -55,7 +54,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserProfile = async (authUser: User) => {
     try {
-      const profile = await onboardingService.getProfile(authUser.id);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('nom, prenom, onboarding_completed')
+        .eq('id', authUser.id)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erreur lors du chargement du profil:', error);
+      }
 
       const userWithProfile: AuthUser = {
         ...authUser,
@@ -65,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(userWithProfile);
 
-      // Rediriger vers l'onboarding si pas complété
+      // Vérifier si l'onboarding est nécessaire
       if (profile && !profile.onboarding_completed) {
         router.replace('/(auth)/onboarding');
       }
