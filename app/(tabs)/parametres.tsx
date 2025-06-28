@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch
 import { router } from 'expo-router';
 import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut, CreditCard as Edit3, Key, Smartphone, Globe, Mail, Crown, Calculator, FileText } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useSubscription } from '../../src/contexts/SubscriptionContext';
 
 export default function Parametres() {
   const { user, logout } = useAuth();
+  const { getCurrentPlan } = useSubscription();
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [autoSave, setAutoSave] = useState(true);
@@ -218,6 +220,8 @@ export default function Parametres() {
     }
   };
 
+  const currentPlan = getCurrentPlan();
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
@@ -238,7 +242,10 @@ export default function Parametres() {
             {user?.name || user?.email?.split('@')[0] || 'Utilisateur'}
           </Text>
           <Text style={styles.profileEmail}>{user?.email}</Text>
-          <Text style={styles.profileStatus}>Auto-entrepreneur • Actif</Text>
+          <View style={styles.profilePlan}>
+            <Crown size={14} color="#9333ea" />
+            <Text style={styles.profilePlanText}>{currentPlan}</Text>
+          </View>
         </View>
         <TouchableOpacity 
           style={styles.editProfileButton}
@@ -526,10 +533,16 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 2,
   },
-  profileStatus: {
-    fontSize: 12,
-    color: '#16a34a',
+  profilePlan: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 4,
+    gap: 4,
+  },
+  profilePlanText: {
+    fontSize: 12,
+    color: '#9333ea',
+    fontWeight: '500',
   },
   editProfileButton: {
     flexDirection: 'row',

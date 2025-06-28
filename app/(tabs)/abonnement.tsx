@@ -1,152 +1,98 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { 
   Crown, 
   Check, 
-  X,
   CreditCard,
   Calendar,
   Star,
   Zap,
   Shield,
   Globe,
-  Palette,
   ArrowRight,
   Info,
-  Sparkles
+  Sparkles,
+  ExternalLink
 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { useSubscription } from '../../src/contexts/SubscriptionContext';
-import { subscriptionService } from '../../src/services/subscription';
-
-interface Plan {
-  id: string;
-  nom: string;
-  prix_mensuel: number;
-  prix_annuel: number;
-  description: string;
-  fonctionnalites: Record<string, string>;
-  limites: Record<string, number>;
-  couleur: string;
-  ordre: number;
-}
+import { stripeService, type SubscriptionData } from '../../src/services/stripe';
+import { stripeConfig, type StripeProduct } from '../../src/stripe-config';
 
 export default function Abonnement() {
   const { user } = useAuth();
-  const { subscription, plan: currentPlan, refreshSubscription } = useSubscription();
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [billingType, setBillingType] = useState<'mensuel' | 'annuel'>('mensuel');
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [subscribing, setSubscribing] = useState<string | null>(null);
 
   useEffect(() => {
-    loadPlans();
+    loadSubscription();
   }, []);
 
-  const loadPlans = async () => {
+  const loadSubscription = async () => {
     try {
-      const plansData = await subscriptionService.getPlans();
-      setPlans(plansData);
+      setLoading(true);
+      const subscriptionData = await stripeService.getUserSubscription();
+      setSubscription(subscriptionData);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
-      Alert.alert('Erreur', 'Impossible de charger les plans d\'abonnement');
+      Alert.alert('Erreur', 'Impossible de charger les informations d\'abonnement');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubscribe = async (planId: string) => {
+  const handleSubscribe = async (product: StripeProduct) => {
     if (!user) {
       Alert.alert('Erreur', 'Vous devez être connecté pour souscrire à un plan');
       return;
     }
 
-    const selectedPlan = plans.find(p => p.id === planId);
-    if (!selectedPlan) return;
+    try {
+      setSubscribing(product.id);
+      
+      const { url } = await stripeService.createCheckoutSession({
+        priceId: product.priceId,
+        mode: product.mode,
+      });
 
-    const price = billingType === 'mensuel' ? selectedPlan.prix_mensuel : selectedPlan.prix_annuel;
-    const period = billingType === 'mensuel' ? 'mois' : 'an';
-
-    Alert.alert(
-      'Confirmation d\'abonnement',
-      `Vous allez souscrire au plan "${selectedPlan.nom}" pour ${price}€/${period}.\n\nSouhaitez-vous continuer ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Confirmer',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await subscriptionService.subscribe(user.id, planId, billingType);
-              Alert.alert('Succès', 'Abonnement souscrit avec succès !');
-              await refreshSubscription();
-            } catch (error) {
-              console.error('Erreur souscription:', error);
-              Alert.alert('Erreur', 'Impossible de souscrire à ce plan. Veuillez réessayer.');
-            } finally {
-              setLoading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleCancelSubscription = async () => {
-    if (!user || !subscription) return;
-
-    Alert.alert(
-      'Annuler l\'abonnement',
-      'Êtes-vous sûr de vouloir annuler votre abonnement ? Vous conserverez l\'accès jusqu\'à la fin de votre période de facturation.',
-      [
-        { text: 'Non', style: 'cancel' },
-        {
-          text: 'Oui, annuler',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await subscriptionService.cancelSubscription(user.id);
-              Alert.alert('Succès', 'Abonnement annulé avec succès');
-              await refreshSubscription();
-            } catch (error) {
-              Alert.alert('Erreur', 'Impossible d\'annuler l\'abonnement');
-            } finally {
-              setLoading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const getPlanIcon = (planName: string) => {
-    switch (planName.toLowerCase()) {
-      case 'freemium': return Star;
-      case 'premium standard': return Zap;
-      case 'premium + pack pro+': return Shield;
-      case 'premium + site vitrine': return Globe;
-      default: return Crown;
+      if (url) {
+        // Redirect to Stripe Checkout
+        window.location.href = url;
+      }
+    } catch (error: any) {
+      console.error('Erreur souscription:', error);
+      Alert.alert('Erreur', error.message || 'Impossible de créer la session de paiement');
+    } finally {
+      setSubscribing(null);
     }
   };
 
-  const formatPrice = (price: number) => {
-    return price === 0 ? 'Gratuit' : `${price.toFixed(0)}€`;
+  const getCurrentProduct = (): StripeProduct | null => {
+    if (!subscription?.price_id) return null;
+    return stripeConfig.products.find(p => p.priceId === subscription.price_id) || null;
   };
 
-  const getEconomies = (mensuel: number, annuel: number) => {
-    if (mensuel === 0) return 0;
-    const prixAnnuelMensualise = mensuel * 12;
-    return Math.round(((prixAnnuelMensualise - annuel) / prixAnnuelMensualise) * 100);
+  const isCurrentPlan = (product: StripeProduct): boolean => {
+    return subscription?.price_id === product.priceId;
+  };
+
+  const getPlanIcon = (productName: string) => {
+    if (productName.includes('Premium + Site Vitrine')) return Globe;
+    if (productName.includes('Premium + Pack Pro')) return Shield;
+    if (productName.includes('Premium')) return Zap;
+    return Star;
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Crown size={48} color="#2563eb" />
+        <ActivityIndicator size="large" color="#2563eb" />
         <Text style={styles.loadingText}>Chargement...</Text>
       </View>
     );
   }
+
+  const currentProduct = getCurrentProduct();
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -160,105 +106,68 @@ export default function Abonnement() {
       </View>
 
       {/* Current Subscription */}
-      {subscription && (
+      {subscription && stripeService.isSubscriptionActive(subscription.subscription_status) && (
         <View style={styles.currentSubscription}>
           <Text style={styles.currentTitle}>Votre abonnement actuel</Text>
           <View style={styles.currentCard}>
             <View style={styles.currentInfo}>
               <View style={styles.currentHeader}>
-                <Text style={styles.currentPlan}>{subscription.plan.nom}</Text>
+                <Text style={styles.currentPlan}>
+                  {currentProduct?.name || 'Plan Premium'}
+                </Text>
                 <View style={[
                   styles.statusBadge,
-                  { backgroundColor: subscription.statut === 'actif' ? '#16a34a' : '#dc2626' }
+                  { backgroundColor: stripeService.isSubscriptionActive(subscription.subscription_status) ? '#16a34a' : '#dc2626' }
                 ]}>
                   <Text style={styles.statusText}>
-                    {subscription.statut === 'actif' ? 'Actif' : subscription.statut}
+                    {stripeService.isSubscriptionActive(subscription.subscription_status) ? 'Actif' : subscription.subscription_status}
                   </Text>
                 </View>
               </View>
-              <Text style={styles.currentBilling}>
-                Facturation: {subscription.type_facturation}
-              </Text>
-              {subscription.date_fin && (
+              
+              {subscription.current_period_end && (
                 <Text style={styles.currentExpiry}>
-                  {subscription.statut === 'actif' ? 'Renouvellement' : 'Expire'} le: {' '}
-                  {new Date(subscription.date_fin).toLocaleDateString('fr-FR')}
+                  {stripeService.isSubscriptionCanceling(subscription.cancel_at_period_end) 
+                    ? 'Expire le' 
+                    : 'Renouvellement le'
+                  } : {stripeService.formatDate(subscription.current_period_end)}
+                </Text>
+              )}
+
+              {subscription.payment_method_brand && subscription.payment_method_last4 && (
+                <Text style={styles.currentPayment}>
+                  Paiement: {subscription.payment_method_brand.toUpperCase()} •••• {subscription.payment_method_last4}
                 </Text>
               )}
             </View>
+            
             <View style={styles.currentActions}>
               <TouchableOpacity style={styles.manageButton}>
                 <CreditCard size={20} color="#2563eb" />
                 <Text style={styles.manageText}>Gérer</Text>
               </TouchableOpacity>
-              {subscription.statut === 'actif' && subscription.plan.nom !== 'Freemium' && (
-                <TouchableOpacity 
-                  style={styles.cancelButton}
-                  onPress={handleCancelSubscription}
-                >
-                  <X size={20} color="#dc2626" />
-                  <Text style={styles.cancelText}>Annuler</Text>
-                </TouchableOpacity>
-              )}
             </View>
           </View>
         </View>
       )}
 
-      {/* Billing Toggle */}
-      <View style={styles.billingToggle}>
-        <TouchableOpacity
-          style={[
-            styles.billingOption,
-            billingType === 'mensuel' && styles.billingOptionActive
-          ]}
-          onPress={() => setBillingType('mensuel')}
-        >
-          <Text style={[
-            styles.billingText,
-            billingType === 'mensuel' && styles.billingTextActive
-          ]}>
-            Mensuel
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.billingOption,
-            billingType === 'annuel' && styles.billingOptionActive
-          ]}
-          onPress={() => setBillingType('annuel')}
-        >
-          <Text style={[
-            styles.billingText,
-            billingType === 'annuel' && styles.billingTextActive
-          ]}>
-            Annuel
-          </Text>
-          <View style={styles.savingsBadge}>
-            <Sparkles size={12} color="#ffffff" />
-            <Text style={styles.savingsText}>-20%</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-
       {/* Plans Grid */}
       <View style={styles.plansContainer}>
-        {plans.map((plan) => {
-          const IconComponent = getPlanIcon(plan.nom);
-          const isCurrentPlan = subscription?.plan_id === plan.id;
-          const price = billingType === 'mensuel' ? plan.prix_mensuel : plan.prix_annuel;
-          const economies = getEconomies(plan.prix_mensuel, plan.prix_annuel);
-          const isPopular = plan.nom.includes('Standard');
+        <Text style={styles.plansTitle}>Plans disponibles</Text>
+        
+        {stripeConfig.products.map((product) => {
+          const IconComponent = getPlanIcon(product.name);
+          const isCurrentUserPlan = isCurrentPlan(product);
+          const isPopular = product.name.includes('Premium +');
           
           return (
-            <View key={plan.id} style={[
+            <View key={product.id} style={[
               styles.planCard,
-              isCurrentPlan && styles.currentPlanCard,
+              isCurrentUserPlan && styles.currentPlanCard,
               isPopular && styles.popularPlanCard,
-              { borderColor: plan.couleur }
             ]}>
               {isPopular && (
-                <View style={[styles.popularBadge, { backgroundColor: plan.couleur }]}>
+                <View style={styles.popularBadge}>
                   <Star size={14} color="#ffffff" />
                   <Text style={styles.popularText}>Populaire</Text>
                 </View>
@@ -266,65 +175,53 @@ export default function Abonnement() {
 
               {/* Plan Header */}
               <View style={styles.planHeader}>
-                <View style={[styles.planIcon, { backgroundColor: plan.couleur }]}>
+                <View style={styles.planIcon}>
                   <IconComponent size={24} color="#ffffff" />
                 </View>
-                <Text style={styles.planName}>{plan.nom}</Text>
-                <Text style={styles.planDescription}>{plan.description}</Text>
+                <Text style={styles.planName}>{product.name}</Text>
               </View>
 
               {/* Price */}
               <View style={styles.priceContainer}>
-                <Text style={styles.price}>{formatPrice(price)}</Text>
-                {price > 0 && (
-                  <Text style={styles.priceUnit}>
-                    /{billingType === 'mensuel' ? 'mois' : 'an'}
-                  </Text>
-                )}
-                {billingType === 'annuel' && economies > 0 && (
-                  <Text style={styles.savings}>Économisez {economies}%</Text>
-                )}
+                <Text style={styles.price}>
+                  {stripeService.formatPrice(product.price)}
+                </Text>
+                <Text style={styles.priceUnit}>/{product.interval}</Text>
               </View>
 
               {/* Features */}
               <View style={styles.featuresContainer}>
-                {Object.entries(plan.fonctionnalites).map(([key, value]) => (
-                  <View key={key} style={styles.feature}>
+                {product.features.map((feature, index) => (
+                  <View key={index} style={styles.feature}>
                     <Check size={16} color="#16a34a" />
-                    <Text style={styles.featureText}>{value}</Text>
+                    <Text style={styles.featureText}>{feature}</Text>
                   </View>
                 ))}
-                
-                {/* Limits */}
-                {plan.limites && Object.keys(plan.limites).length > 0 && (
-                  <View style={styles.limitsContainer}>
-                    <Text style={styles.limitsTitle}>Limites :</Text>
-                    {Object.entries(plan.limites).map(([key, value]) => (
-                      <Text key={key} style={styles.limitText}>
-                        • {key}: {value === 999 ? 'Illimité' : value}
-                      </Text>
-                    ))}
-                  </View>
-                )}
               </View>
 
               {/* Action Button */}
               <TouchableOpacity
                 style={[
                   styles.subscribeButton,
-                  isCurrentPlan && styles.currentPlanButton,
-                  { backgroundColor: isCurrentPlan ? '#f3f4f6' : plan.couleur }
+                  isCurrentUserPlan && styles.currentPlanButton,
+                  subscribing === product.id && styles.loadingButton,
                 ]}
-                onPress={() => !isCurrentPlan && handleSubscribe(plan.id)}
-                disabled={isCurrentPlan || loading}
+                onPress={() => !isCurrentUserPlan && handleSubscribe(product)}
+                disabled={isCurrentUserPlan || subscribing === product.id}
               >
-                <Text style={[
-                  styles.subscribeText,
-                  isCurrentPlan && styles.currentPlanText
-                ]}>
-                  {isCurrentPlan ? 'Plan actuel' : 'Choisir ce plan'}
-                </Text>
-                {!isCurrentPlan && <ArrowRight size={16} color="#ffffff" />}
+                {subscribing === product.id ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Text style={[
+                      styles.subscribeText,
+                      isCurrentUserPlan && styles.currentPlanText
+                    ]}>
+                      {isCurrentUserPlan ? 'Plan actuel' : 'Choisir ce plan'}
+                    </Text>
+                    {!isCurrentUserPlan && <ArrowRight size={16} color="#ffffff" />}
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           );
@@ -354,7 +251,7 @@ export default function Abonnement() {
         <View style={styles.faqItem}>
           <Text style={styles.faqQuestion}>Les paiements sont-ils sécurisés ?</Text>
           <Text style={styles.faqAnswer}>
-            Oui, tous les paiements sont traités de manière sécurisée. 
+            Oui, tous les paiements sont traités de manière sécurisée par Stripe. 
             Vos données de paiement sont protégées selon les standards de l'industrie.
           </Text>
         </View>
@@ -448,12 +345,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#ffffff',
   },
-  currentBilling: {
+  currentExpiry: {
     fontSize: 14,
     color: '#6b7280',
     marginBottom: 4,
   },
-  currentExpiry: {
+  currentPayment: {
     fontSize: 14,
     color: '#6b7280',
   },
@@ -477,79 +374,20 @@ const styles = StyleSheet.create({
     color: '#2563eb',
     marginLeft: 6,
   },
-  cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef2f2',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    flex: 1,
-    justifyContent: 'center',
-  },
-  cancelText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#dc2626',
-    marginLeft: 6,
-  },
-  billingToggle: {
-    flexDirection: 'row',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    padding: 4,
-    marginHorizontal: 16,
-    marginBottom: 16,
-  },
-  billingOption: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    position: 'relative',
-  },
-  billingOptionActive: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  billingText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#6b7280',
-  },
-  billingTextActive: {
-    color: '#111827',
-  },
-  savingsBadge: {
-    position: 'absolute',
-    top: -8,
-    right: 8,
-    backgroundColor: '#16a34a',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  savingsText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
   plansContainer: {
     padding: 16,
-    gap: 16,
+  },
+  plansTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 16,
   },
   planCard: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
+    marginBottom: 16,
     borderWidth: 2,
     borderColor: '#e5e7eb',
     shadowColor: '#000',
@@ -560,10 +398,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   currentPlanCard: {
-    borderWidth: 2,
+    borderColor: '#2563eb',
   },
   popularPlanCard: {
-    borderWidth: 2,
+    borderColor: '#9333ea',
     transform: [{ scale: 1.02 }],
   },
   popularBadge: {
@@ -575,6 +413,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 6,
+    backgroundColor: '#9333ea',
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
     gap: 4,
@@ -593,6 +432,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
+    backgroundColor: '#2563eb',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -601,12 +441,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  planDescription: {
-    fontSize: 14,
-    color: '#6b7280',
     textAlign: 'center',
   },
   priceContainer: {
@@ -623,16 +457,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 4,
   },
-  savings: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#16a34a',
-    backgroundColor: '#f0fdf4',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginTop: 8,
-  },
   featuresContainer: {
     marginBottom: 20,
   },
@@ -647,33 +471,20 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
   },
-  limitsContainer: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-  },
-  limitsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6b7280',
-    marginBottom: 6,
-  },
-  limitText: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginBottom: 2,
-  },
   subscribeButton: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#2563eb',
     paddingVertical: 12,
     borderRadius: 8,
     gap: 6,
   },
   currentPlanButton: {
     backgroundColor: '#f3f4f6',
+  },
+  loadingButton: {
+    opacity: 0.7,
   },
   subscribeText: {
     fontSize: 16,

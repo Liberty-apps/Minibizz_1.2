@@ -1,31 +1,29 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { subscriptionService } from '../services/subscription';
+import { stripeService, type SubscriptionData } from '../services/stripe';
+import { stripeConfig } from '../stripe-config';
 
 interface SubscriptionContextType {
-  subscription: any | null;
-  plan: any | null;
+  subscription: SubscriptionData | null;
   hasAccess: (feature: string) => boolean;
-  canUse: (type: string) => Promise<boolean>;
-  loading: boolean;
+  isLoading: boolean;
   refreshSubscription: () => Promise<void>;
+  getCurrentPlan: () => string;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [subscription, setSubscription] = useState<any | null>(null);
-  const [plan, setPlan] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       loadSubscription();
     } else {
       setSubscription(null);
-      setPlan(null);
-      setLoading(false);
+      setIsLoading(false);
     }
   }, [user]);
 
@@ -33,40 +31,90 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     if (!user) return;
     
     try {
-      setLoading(true);
-      const subscriptionData = await subscriptionService.getCurrentSubscription(user.id);
+      setIsLoading(true);
+      const subscriptionData = await stripeService.getUserSubscription();
       setSubscription(subscriptionData);
-      setPlan(subscriptionData?.plan || null);
     } catch (error) {
       console.error('Erreur lors du chargement de l\'abonnement:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
+  };
+
+  const getCurrentPlan = (): string => {
+    if (!subscription || !stripeService.isSubscriptionActive(subscription.subscription_status)) {
+      return 'Freemium';
+    }
+
+    const currentProduct = stripeConfig.products.find(p => p.priceId === subscription.price_id);
+    return currentProduct?.name || 'Premium';
   };
 
   const hasAccess = (feature: string): boolean => {
     if (!user) return false;
     
-    if (!subscription || subscription.statut !== 'actif') {
-      // Plan gratuit par défaut
-      return subscriptionService.checkFeatureAccess('freemium', feature);
+    // If no active subscription, user has freemium access
+    if (!subscription || !stripeService.isSubscriptionActive(subscription.subscription_status)) {
+      return checkFreemiumAccess(feature);
     }
 
-    return subscriptionService.checkFeatureAccess(
-      subscription.plan.nom.toLowerCase(), 
-      feature
-    );
+    // Find the current product
+    const currentProduct = stripeConfig.products.find(p => p.priceId === subscription.price_id);
+    if (!currentProduct) return checkFreemiumAccess(feature);
+
+    return checkPremiumAccess(currentProduct.name, feature);
   };
 
-  const canUse = async (type: string): Promise<boolean> => {
-    if (!user) return false;
-    
-    try {
-      return await subscriptionService.checkUsageLimit(user.id, type);
-    } catch (error) {
-      console.error('Erreur lors de la vérification des limites:', error);
-      return false;
+  const checkFreemiumAccess = (feature: string): boolean => {
+    const freemiumFeatures = [
+      'dashboard',
+      'clients_basic',
+      'devis_basic',
+      'planning_basic',
+      'calculs',
+      'aide'
+    ];
+    return freemiumFeatures.includes(feature);
+  };
+
+  const checkPremiumAccess = (planName: string, feature: string): boolean => {
+    // All premium plans have access to basic features
+    const basicPremiumFeatures = [
+      'dashboard',
+      'clients',
+      'devis',
+      'factures',
+      'planning',
+      'calculs',
+      'parametres',
+      'aide'
+    ];
+
+    if (basicPremiumFeatures.includes(feature)) {
+      return true;
     }
+
+    // Plan-specific features
+    if (planName.includes('Pack Pro')) {
+      const packProFeatures = [
+        'missions',
+        'actualites',
+        'analytics',
+        'assistance_juridique',
+        'assistance_marketing'
+      ];
+      return packProFeatures.includes(feature);
+    }
+
+    if (planName.includes('Site Vitrine')) {
+      const siteVitrineFeatures = [
+        'sites-vitrines',
+        'domaine-personnalise'
+      ];
+      return siteVitrineFeatures.includes(feature);
+    }
+
+    return false;
   };
 
   const refreshSubscription = async () => {
@@ -76,11 +124,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   return (
     <SubscriptionContext.Provider value={{
       subscription,
-      plan,
       hasAccess,
-      canUse,
-      loading,
-      refreshSubscription
+      isLoading,
+      refreshSubscription,
+      getCurrentPlan
     }}>
       {children}
     </SubscriptionContext.Provider>
