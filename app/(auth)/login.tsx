@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { FileText, Mail, Lock, CircleAlert as AlertCircle } from 'lucide-react-native';
+import { FileText, Mail, Lock, CircleAlert as AlertCircle, Wifi, WifiOff } from 'lucide-react-native';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -15,14 +15,54 @@ export default function Login() {
     try {
       setError('');
       setLoading(true);
-      await login(email, password);
+
+      // Validation basique
+      if (!email.trim()) {
+        setError('Veuillez saisir votre adresse email');
+        return;
+      }
+
+      if (!password.trim()) {
+        setError('Veuillez saisir votre mot de passe');
+        return;
+      }
+
+      // Validation format email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setError('Veuillez saisir une adresse email valide');
+        return;
+      }
+
+      await login(email.trim(), password);
       router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Login failed:', error);
-      setError(error.message || 'Échec de la connexion. Vérifiez vos identifiants.');
+      
+      // Messages d'erreur plus explicites pour l'utilisateur
+      let errorMessage = 'Échec de la connexion. Vérifiez vos identifiants.';
+      
+      if (error.message.includes('Configuration Supabase manquante')) {
+        errorMessage = 'Erreur de configuration. Contactez le support technique.';
+      } else if (error.message.includes('Impossible de se connecter au serveur')) {
+        errorMessage = 'Problème de connexion. Vérifiez votre connexion internet.';
+      } else if (error.message.includes('Email ou mot de passe incorrect')) {
+        errorMessage = 'Email ou mot de passe incorrect';
+      } else if (error.message.includes('confirmer votre email')) {
+        errorMessage = 'Veuillez confirmer votre email avant de vous connecter';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getErrorIcon = () => {
+    if (error.includes('connexion') || error.includes('serveur')) {
+      return <WifiOff color="#ef4444" size={20} />;
+    }
+    return <AlertCircle color="#ef4444" size={20} />;
   };
 
   return (
@@ -41,7 +81,7 @@ export default function Login() {
         <View style={styles.form}>
           {error ? (
             <View style={styles.errorContainer}>
-              <AlertCircle color="#ef4444" size={20} />
+              {getErrorIcon()}
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -58,6 +98,7 @@ export default function Login() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
+                editable={!loading}
               />
             </View>
           </View>
@@ -73,6 +114,7 @@ export default function Login() {
                 placeholder="••••••••"
                 secureTextEntry
                 autoComplete="password"
+                editable={!loading}
               />
             </View>
           </View>
@@ -95,6 +137,21 @@ export default function Login() {
               </Link>
             </Text>
           </View>
+
+          {/* Informations de débogage en mode développement */}
+          {__DEV__ && (
+            <View style={styles.debugContainer}>
+              <Text style={styles.debugText}>
+                Mode développement - Vérifiez votre fichier .env
+              </Text>
+              <Text style={styles.debugText}>
+                URL: {process.env.EXPO_PUBLIC_SUPABASE_URL ? '✓ Configurée' : '✗ Manquante'}
+              </Text>
+              <Text style={styles.debugText}>
+                Clé: {process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? '✓ Configurée' : '✗ Manquante'}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -214,5 +271,18 @@ const styles = StyleSheet.create({
   link: {
     color: '#2563eb',
     fontWeight: '500',
+  },
+  debugContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
   },
 });

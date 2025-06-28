@@ -79,17 +79,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
+      
+      // Vérification de la configuration Supabase avant la tentative de connexion
+      if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
+        throw new Error('Configuration Supabase manquante. Veuillez vérifier vos variables d\'environnement.');
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Messages d'erreur plus explicites
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Email ou mot de passe incorrect');
+        } else if (error.message.includes('Email not confirmed')) {
+          throw new Error('Veuillez confirmer votre email avant de vous connecter');
+        } else if (error.message.includes('Failed to fetch')) {
+          throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion internet et la configuration Supabase.');
+        } else {
+          throw error;
+        }
+      }
 
       if (data.user) {
         await loadUserProfile(data.user);
       }
     } catch (error: any) {
+      console.error('Erreur de connexion:', error);
       throw new Error(error.message || 'Erreur de connexion');
     } finally {
       setLoading(false);
@@ -99,12 +117,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (email: string, password: string) => {
     try {
       setLoading(true);
+      
+      // Vérification de la configuration Supabase
+      if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
+        throw new Error('Configuration Supabase manquante. Veuillez vérifier vos variables d\'environnement.');
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('User already registered')) {
+          throw new Error('Un compte existe déjà avec cette adresse email');
+        } else if (error.message.includes('Failed to fetch')) {
+          throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion internet et la configuration Supabase.');
+        } else {
+          throw error;
+        }
+      }
 
       if (data.user) {
         // Créer le profil utilisateur
@@ -126,6 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await loadUserProfile(data.user);
       }
     } catch (error: any) {
+      console.error('Erreur d\'inscription:', error);
       throw new Error(error.message || 'Erreur de création de compte');
     } finally {
       setLoading(false);
@@ -140,6 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       router.replace('/(auth)/login');
     } catch (error: any) {
+      console.error('Erreur de déconnexion:', error);
       throw new Error(error.message || 'Erreur de déconnexion');
     }
   };

@@ -5,8 +5,26 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Variables d\'environnement Supabase:', {
+    url: supabaseUrl ? 'Définie' : 'Manquante',
+    key: supabaseAnonKey ? 'Définie' : 'Manquante'
+  });
   throw new Error(
     'Variables d\'environnement Supabase manquantes. Veuillez configurer EXPO_PUBLIC_SUPABASE_URL et EXPO_PUBLIC_SUPABASE_ANON_KEY dans votre fichier .env'
+  );
+}
+
+// Validation du format de l'URL
+if (!supabaseUrl.startsWith('https://') || !supabaseUrl.includes('.supabase.co')) {
+  throw new Error(
+    'Format d\'URL Supabase invalide. L\'URL doit être au format: https://your-project-ref.supabase.co'
+  );
+}
+
+// Validation de la clé API
+if (supabaseAnonKey.length < 100) {
+  throw new Error(
+    'Clé API Supabase invalide. Vérifiez que vous utilisez la clé "anon/public" depuis votre tableau de bord Supabase.'
   );
 }
 
