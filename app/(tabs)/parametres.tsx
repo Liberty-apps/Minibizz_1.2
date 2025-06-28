@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch } from 'react-native';
-import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert } from 'react-native';
+import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut } from 'lucide-react-native';
+import { useAuth } from '../../src/contexts/AuthContext';
 
 export default function Parametres() {
+  const { user, logout } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [autoSave, setAutoSave] = useState(true);
@@ -10,11 +12,19 @@ export default function Parametres() {
   const [userInfo, setUserInfo] = useState({
     nom: '',
     prenom: '',
-    email: '',
+    email: user?.email || '',
     telephone: '',
     siret: '',
     activite: 'service'
   });
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de se déconnecter');
+    }
+  };
 
   const settingsSections = [
     {
@@ -66,11 +76,13 @@ export default function Parametres() {
       {/* Profile Summary */}
       <View style={styles.profileSummary}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>JD</Text>
+          <Text style={styles.avatarText}>
+            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+          </Text>
         </View>
         <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>John Doe</Text>
-          <Text style={styles.profileEmail}>john.doe@email.com</Text>
+          <Text style={styles.profileName}>{user?.name || 'Utilisateur'}</Text>
+          <Text style={styles.profileEmail}>{user?.email}</Text>
           <Text style={styles.profileStatus}>Auto-entrepreneur • Actif</Text>
         </View>
         <TouchableOpacity style={styles.editProfileButton}>
@@ -137,7 +149,8 @@ export default function Parametres() {
       </View>
 
       {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton}>
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <LogOut size={20} color="#ffffff" style={styles.logoutIcon} />
         <Text style={styles.logoutText}>Se déconnecter</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -309,12 +322,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#dc2626',
     marginHorizontal: 16,
     marginBottom: 32,
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
+  },
+  logoutIcon: {
+    marginRight: 8,
   },
   logoutText: {
     fontSize: 16,
