@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
-import { Globe, Plus, Eye, Edit3, Settings, Trash2, ExternalLink, Palette, Layout, Image as ImageIcon, Search } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Image } from 'react-native';
+import { Globe, Plus, Eye, Edit3, Settings, Trash2, ExternalLink, Palette, Layout, ImageIcon as ImageIcon, Search } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useSubscription } from '../../src/contexts/SubscriptionContext';
 import { sitesService } from '../../src/services/sites';
+import UpgradePrompt from '../../components/UpgradePrompt';
 
 interface SiteVitrine {
   id: string;
@@ -24,6 +27,7 @@ interface Template {
 
 export default function SitesVitrines() {
   const { user } = useAuth();
+  const { hasAccess, plan, canUse } = useSubscription();
   const [sites, setSites] = useState<SiteVitrine[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -32,10 +36,22 @@ export default function SitesVitrines() {
   const [sousdomaine, setSousdomaine] = useState('');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   useEffect(() => {
-    loadData();
+    checkAccess();
   }, [user]);
+
+  const checkAccess = async () => {
+    if (!user) return;
+    
+    if (!hasAccess('sites-vitrines')) {
+      setShowUpgradePrompt(true);
+      return;
+    }
+    
+    loadData();
+  };
 
   const loadData = async () => {
     if (!user) return;
@@ -73,14 +89,37 @@ export default function SitesVitrines() {
   };
 
   const handleCreateSite = async () => {
-    const validationError = validateForm();
-    if (validationError) {
-      Alert.alert('Erreur', validationError);
+    if (!user) {
+      Alert.alert('Erreur', 'Vous devez être connecté pour créer un site');
       return;
     }
 
-    if (!user) {
-      Alert.alert('Erreur', 'Vous devez être connecté pour créer un site');
+    // Vérifier si l'utilisateur a accès à cette fonctionnalité
+    if (!hasAccess('sites-vitrines')) {
+      setShowUpgradePrompt(true);
+      return;
+    }
+
+    // Vérifier si l'utilisateur a atteint sa limite de sites
+    const canCreateSite = await canUse('sites');
+    if (!canCreateSite) {
+      Alert.alert(
+        'Limite atteinte',
+        `Vous avez atteint votre limite de sites pour votre plan ${plan?.nom}. Veuillez passer à un plan supérieur pour créer plus de sites.`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { 
+            text: 'Voir les plans', 
+            onPress: () => router.push('/(tabs)/abonnement')
+          }
+        ]
+      );
+      return;
+    }
+
+    const validationError = validateForm();
+    if (validationError) {
+      Alert.alert('Erreur', validationError);
       return;
     }
 
@@ -91,6 +130,7 @@ export default function SitesVitrines() {
       const isAvailable = await sitesService.checkSubdomainAvailability(sousdomaine.trim().toLowerCase());
       if (!isAvailable) {
         Alert.alert('Erreur', 'Ce sous-domaine est déjà utilisé. Veuillez en choisir un autre.');
+        setLoading(false);
         return;
       }
 
@@ -166,6 +206,30 @@ export default function SitesVitrines() {
     }
   };
 
+  const handleEditSite = (siteId: string) => {
+    router.push(`/sites-vitrines/${siteId}/edit`);
+  };
+
+  const handleViewSite = (site: SiteVitrine) => {
+    const url = site.domaine_personnalise || `https://${site.sous_domaine}.minibizz.fr`;
+    Alert.alert(
+      'Visiter le site',
+      `Voulez-vous ouvrir ${url} dans votre navigateur ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Ouvrir', 
+          onPress: () => {
+            // Ouvrir l'URL dans le navigateur
+            if (typeof window !== 'undefined') {
+              window.open(url, '_blank');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const getStatusColor = (statut: string) => {
     switch (statut) {
       case 'publie': return '#16a34a';
@@ -194,6 +258,69 @@ export default function SitesVitrines() {
       <View style={styles.loadingContainer}>
         <Globe size={48} color="#2563eb" />
         <Text style={styles.loadingText}>Chargement...</Text>
+      </View>
+    );
+  }
+
+  if (!hasAccess('sites-vitrines')) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Sites Vitrines</Text>
+          <Text style={styles.subtitle}>
+            Créez et gérez vos mini-sites professionnels
+          </Text>
+        </View>
+        
+        <View style={styles.upgradeContainer}>
+          <View style={styles.upgradeCard}>
+            <Globe size={64} color="#9333ea" />
+            <Text style={styles.upgradeTitle}>Fonctionnalité Premium</Text>
+            <Text style={styles.upgradeText}>
+              La création de sites vitrines est disponible uniquement avec le plan "Premium + Site Vitrine"
+            </Text>
+            <TouchableOpacity 
+              style={styles.upgradeButton}
+              onPress={() => router.push('/(tabs)/abonnement')}
+            >
+              <Text style={styles.upgradeButtonText}>Voir les plans</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.featuresSection}>
+            <Text style={styles.featuresTitle}>Fonctionnalités incluses</Text>
+            <View style={styles.featuresGrid}>
+              <View style={styles.featureCard}>
+                <Palette size={24} color="#2563eb" />
+                <Text style={styles.featureTitle}>Personnalisation</Text>
+                <Text style={styles.featureText}>
+                  Couleurs, polices et mise en page personnalisables
+                </Text>
+              </View>
+              <View style={styles.featureCard}>
+                <ImageIcon size={24} color="#16a34a" />
+                <Text style={styles.featureTitle}>Galerie</Text>
+                <Text style={styles.featureText}>
+                  Ajoutez vos photos et créez des galeries
+                </Text>
+              </View>
+              <View style={styles.featureCard}>
+                <Globe size={24} color="#9333ea" />
+                <Text style={styles.featureTitle}>Domaine</Text>
+                <Text style={styles.featureText}>
+                  Sous-domaine gratuit ou domaine personnalisé
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+        
+        <UpgradePrompt 
+          visible={showUpgradePrompt}
+          onClose={() => setShowUpgradePrompt(false)}
+          feature="sites-vitrines"
+          currentPlan={plan?.nom}
+        />
       </View>
     );
   }
@@ -279,10 +406,16 @@ export default function SitesVitrines() {
                   </View>
                 </View>
                 <View style={styles.siteActions}>
-                  <TouchableOpacity style={styles.actionButton}>
-                    <Eye size={18} color="#6b7280" />
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={() => site.statut === 'publie' && handleViewSite(site)}
+                  >
+                    <Eye size={18} color={site.statut === 'publie' ? "#6b7280" : "#d1d5db"} />
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionButton}>
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={() => handleEditSite(site.id)}
+                  >
                     <Edit3 size={18} color="#6b7280" />
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.actionButton}>
@@ -314,7 +447,10 @@ export default function SitesVitrines() {
                 </TouchableOpacity>
 
                 {site.statut === 'publie' && (
-                  <TouchableOpacity style={styles.visitButton}>
+                  <TouchableOpacity 
+                    style={styles.visitButton}
+                    onPress={() => handleViewSite(site)}
+                  >
                     <ExternalLink size={16} color="#2563eb" />
                     <Text style={styles.visitText}>Visiter</Text>
                   </TouchableOpacity>
@@ -796,5 +932,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 20,
+  },
+  upgradeContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  upgradeCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 24,
+  },
+  upgradeTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  upgradeText: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  upgradeButton: {
+    backgroundColor: '#9333ea',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  upgradeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

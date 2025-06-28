@@ -70,6 +70,20 @@ export const devisService = {
     return data || [];
   },
 
+  async getById(id: string): Promise<(Devis & { client: Client })> {
+    const { data, error } = await supabase
+      .from('devis')
+      .select(`
+        *,
+        client:clients(*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   async create(devis: Tables['devis']['Insert']): Promise<Devis> {
     const { data, error } = await supabase
       .from('devis')
@@ -112,6 +126,55 @@ export const devisService = {
 
     const nextNumber = (count || 0) + 1;
     return `DEV-${year}-${nextNumber.toString().padStart(3, '0')}`;
+  },
+
+  async getLines(devisId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('devis_lignes')
+      .select('*')
+      .eq('devis_id', devisId)
+      .order('ordre', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async addLine(devisId: string, line: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('devis_lignes')
+      .insert({
+        devis_id: devisId,
+        description: line.description,
+        quantite: line.quantite,
+        prix_unitaire: line.prix_unitaire,
+        taux_tva: line.taux_tva
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async updateLine(lineId: string, updates: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('devis_lignes')
+      .update(updates)
+      .eq('id', lineId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteLine(lineId: string): Promise<void> {
+    const { error } = await supabase
+      .from('devis_lignes')
+      .delete()
+      .eq('id', lineId);
+
+    if (error) throw error;
   }
 };
 
@@ -129,6 +192,20 @@ export const facturesService = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  async getById(id: string): Promise<(Facture & { client: Client })> {
+    const { data, error } = await supabase
+      .from('factures')
+      .select(`
+        *,
+        client:clients(*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 
   async create(facture: Tables['factures']['Insert']): Promise<Facture> {
@@ -164,6 +241,55 @@ export const facturesService = {
 
     const nextNumber = (count || 0) + 1;
     return `FAC-${year}-${nextNumber.toString().padStart(3, '0')}`;
+  },
+
+  async getLines(factureId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('factures_lignes')
+      .select('*')
+      .eq('facture_id', factureId)
+      .order('ordre', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async addLine(factureId: string, line: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('factures_lignes')
+      .insert({
+        facture_id: factureId,
+        description: line.description,
+        quantite: line.quantite,
+        prix_unitaire: line.prix_unitaire,
+        taux_tva: line.taux_tva
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async updateLine(lineId: string, updates: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('factures_lignes')
+      .update(updates)
+      .eq('id', lineId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteLine(lineId: string): Promise<void> {
+    const { error } = await supabase
+      .from('factures_lignes')
+      .delete()
+      .eq('id', lineId);
+
+    if (error) throw error;
   }
 };
 

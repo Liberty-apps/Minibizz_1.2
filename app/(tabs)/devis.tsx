@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { FileText, Plus, Search, Filter, Eye, CreditCard as Edit3, Download, Send, Calendar, Euro, Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle } from 'lucide-react-native';
+import { FileText, Plus, Search, Filter, Eye, CreditCard as Edit3, Download, Send, Calendar, Euro, Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Lock } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useSubscription } from '../../src/contexts/SubscriptionContext';
 import { devisService, facturesService } from '../../src/services/database';
+import UpgradePrompt from '../../components/UpgradePrompt';
 
 export default function Devis() {
   const { user } = useAuth();
+  const { hasAccess, plan, canUse } = useSubscription();
   const [activeTab, setActiveTab] = useState<'devis' | 'factures'>('devis');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [devisList, setDevisList] = useState<any[]>([]);
   const [facturesList, setFacturesList] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState('');
 
   useEffect(() => {
     loadData();
@@ -25,9 +30,13 @@ export default function Devis() {
       setLoading(true);
       setError(null);
       
+      // Vérifier les accès selon le plan
+      const hasDevisAccess = hasAccess('devis');
+      const hasFacturesAccess = hasAccess('factures');
+      
       const [devisData, facturesData] = await Promise.all([
-        devisService.getAll(user.id),
-        facturesService.getAll(user.id)
+        hasDevisAccess ? devisService.getAll(user.id) : [],
+        hasFacturesAccess ? facturesService.getAll(user.id) : []
       ]);
       
       setDevisList(devisData);
@@ -53,6 +62,36 @@ export default function Devis() {
       return;
     }
 
+    // Vérifier l'accès à la fonctionnalité
+    if (activeTab === 'devis' && !hasAccess('devis')) {
+      setUpgradeFeature('devis');
+      setShowUpgradePrompt(true);
+      return;
+    }
+
+    if (activeTab === 'factures' && !hasAccess('factures')) {
+      setUpgradeFeature('factures');
+      setShowUpgradePrompt(true);
+      return;
+    }
+
+    // Vérifier les limites d'utilisation
+    const canCreateDocument = await canUse(activeTab);
+    if (!canCreateDocument) {
+      Alert.alert(
+        'Limite atteinte',
+        `Vous avez atteint votre limite de ${activeTab} pour votre plan ${plan?.nom}. Veuillez passer à un plan supérieur pour en créer davantage.`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { 
+            text: 'Voir les plans', 
+            onPress: () => router.push('/(tabs)/abonnement')
+          }
+        ]
+      );
+      return;
+    }
+
     try {
       if (activeTab === 'devis') {
         const numero = await devisService.generateNumero(user.id);
@@ -67,18 +106,66 @@ export default function Devis() {
   };
 
   const handleViewDocument = (id: string) => {
+    if (activeTab === 'devis' && !hasAccess('devis')) {
+      setUpgradeFeature('devis');
+      setShowUpgradePrompt(true);
+      return;
+    }
+
+    if (activeTab === 'factures' && !hasAccess('factures')) {
+      setUpgradeFeature('factures');
+      setShowUpgradePrompt(true);
+      return;
+    }
+
     router.push(`/${activeTab}/${id}`);
   };
 
   const handleEditDocument = (id: string) => {
+    if (activeTab === 'devis' && !hasAccess('devis')) {
+      setUpgradeFeature('devis');
+      setShowUpgradePrompt(true);
+      return;
+    }
+
+    if (activeTab === 'factures' && !hasAccess('factures')) {
+      setUpgradeFeature('factures');
+      setShowUpgradePrompt(true);
+      return;
+    }
+
     router.push(`/${activeTab}/${id}/edit`);
   };
 
   const handleDownloadDocument = (id: string) => {
+    if (activeTab === 'devis' && !hasAccess('devis')) {
+      setUpgradeFeature('devis');
+      setShowUpgradePrompt(true);
+      return;
+    }
+
+    if (activeTab === 'factures' && !hasAccess('factures')) {
+      setUpgradeFeature('factures');
+      setShowUpgradePrompt(true);
+      return;
+    }
+
     Alert.alert('Téléchargement', `Téléchargement du ${activeTab} ${id} en cours...`);
   };
 
   const handleSendDocument = (id: string) => {
+    if (activeTab === 'devis' && !hasAccess('devis')) {
+      setUpgradeFeature('devis');
+      setShowUpgradePrompt(true);
+      return;
+    }
+
+    if (activeTab === 'factures' && !hasAccess('factures')) {
+      setUpgradeFeature('factures');
+      setShowUpgradePrompt(true);
+      return;
+    }
+
     router.push(`/${activeTab}/${id}/send`);
   };
 
@@ -159,6 +246,7 @@ export default function Devis() {
         >
           <Text style={[styles.tabText, activeTab === 'devis' && styles.activeTabText]}>
             Devis ({devisList.length})
+            {!hasAccess('devis') && <Lock size={12} color="#9ca3af" style={styles.tabLockIcon} />}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -167,6 +255,7 @@ export default function Devis() {
         >
           <Text style={[styles.tabText, activeTab === 'factures' && styles.activeTabText]}>
             Factures ({facturesList.length})
+            {!hasAccess('factures') && <Lock size={12} color="#9ca3af" style={styles.tabLockIcon} />}
           </Text>
         </TouchableOpacity>
       </View>
@@ -193,123 +282,148 @@ export default function Devis() {
         </TouchableOpacity>
       </View>
 
-      {/* List */}
-      <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
-        {filteredList.length === 0 ? (
-          <View style={styles.emptyState}>
-            <FileText size={64} color="#d1d5db" />
-            <Text style={styles.emptyTitle}>
-              {searchTerm ? 'Aucun résultat' : `Aucun ${activeTab}`}
+      {/* Upgrade Prompt for Premium Features */}
+      {((activeTab === 'devis' && !hasAccess('devis')) || 
+        (activeTab === 'factures' && !hasAccess('factures'))) ? (
+        <View style={styles.upgradeContainer}>
+          <View style={styles.upgradeCard}>
+            <FileText size={64} color="#9333ea" />
+            <Text style={styles.upgradeTitle}>
+              Fonctionnalité Premium
             </Text>
-            <Text style={styles.emptyText}>
-              {searchTerm 
-                ? 'Essayez avec d\'autres mots-clés'
-                : `Créez votre premier ${activeTab} en appuyant sur le bouton +`
+            <Text style={styles.upgradeText}>
+              {activeTab === 'devis' 
+                ? 'La création et gestion de devis professionnels est disponible avec les plans Premium'
+                : 'La création et gestion de factures est disponible avec les plans Premium'
               }
             </Text>
-            {!searchTerm && (
-              <TouchableOpacity style={styles.createFirstButton} onPress={handleCreateNew}>
-                <Text style={styles.createFirstText}>Créer mon premier {activeTab}</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity 
+              style={styles.upgradeButton}
+              onPress={() => router.push('/(tabs)/abonnement')}
+            >
+              <Text style={styles.upgradeButtonText}>Voir les plans</Text>
+            </TouchableOpacity>
           </View>
-        ) : (
-          filteredList.map((item) => {
-            const StatusIcon = getStatusIcon(item.statut);
-            const statusColor = getStatusColor(item.statut);
-            
-            return (
-              <TouchableOpacity 
-                key={item.id} 
-                style={styles.listItem}
-                onPress={() => handleViewDocument(item.id)}
-              >
-                <View style={styles.itemHeader}>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemNumber}>{item.numero}</Text>
-                    <Text style={styles.itemClient}>
-                      {item.client?.nom || 'Client non défini'}
-                    </Text>
-                  </View>
-                  <View style={styles.itemRight}>
-                    <Text style={styles.itemAmount}>
-                      {item.montant_ttc?.toLocaleString('fr-FR')}€
-                    </Text>
-                    <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-                      <StatusIcon size={12} color="#ffffff" />
-                      <Text style={styles.statusText}>{item.statut}</Text>
-                    </View>
-                  </View>
-                </View>
-                
-                <View style={styles.itemDetails}>
-                  <View style={styles.detailRow}>
-                    <Calendar size={14} color="#6b7280" />
-                    <Text style={styles.itemDate}>
-                      Émis le {new Date(item.date_emission).toLocaleDateString('fr-FR')}
-                    </Text>
-                  </View>
-                  {activeTab === 'devis' && item.date_validite && (
-                    <View style={styles.detailRow}>
-                      <Clock size={14} color="#6b7280" />
-                      <Text style={styles.itemDate}>
-                        Valide jusqu'au {new Date(item.date_validite).toLocaleDateString('fr-FR')}
+        </View>
+      ) : (
+        /* List */
+        <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
+          {filteredList.length === 0 ? (
+            <View style={styles.emptyState}>
+              <FileText size={64} color="#d1d5db" />
+              <Text style={styles.emptyTitle}>
+                {searchTerm ? 'Aucun résultat' : `Aucun ${activeTab}`}
+              </Text>
+              <Text style={styles.emptyText}>
+                {searchTerm 
+                  ? 'Essayez avec d\'autres mots-clés'
+                  : `Créez votre premier ${activeTab} en appuyant sur le bouton +`
+                }
+              </Text>
+              {!searchTerm && (
+                <TouchableOpacity style={styles.createFirstButton} onPress={handleCreateNew}>
+                  <Text style={styles.createFirstText}>Créer mon premier {activeTab}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            filteredList.map((item) => {
+              const StatusIcon = getStatusIcon(item.statut);
+              const statusColor = getStatusColor(item.statut);
+              
+              return (
+                <TouchableOpacity 
+                  key={item.id} 
+                  style={styles.listItem}
+                  onPress={() => handleViewDocument(item.id)}
+                >
+                  <View style={styles.itemHeader}>
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemNumber}>{item.numero}</Text>
+                      <Text style={styles.itemClient}>
+                        {item.client?.nom || 'Client non défini'}
                       </Text>
                     </View>
-                  )}
-                  {activeTab === 'factures' && item.date_echeance && (
+                    <View style={styles.itemRight}>
+                      <Text style={styles.itemAmount}>
+                        {item.montant_ttc?.toLocaleString('fr-FR')}€
+                      </Text>
+                      <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+                        <StatusIcon size={12} color="#ffffff" />
+                        <Text style={styles.statusText}>{item.statut}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.itemDetails}>
                     <View style={styles.detailRow}>
-                      <Euro size={14} color="#6b7280" />
+                      <Calendar size={14} color="#6b7280" />
                       <Text style={styles.itemDate}>
-                        Échéance: {new Date(item.date_echeance).toLocaleDateString('fr-FR')}
+                        Émis le {new Date(item.date_emission).toLocaleDateString('fr-FR')}
                       </Text>
                     </View>
-                  )}
-                </View>
+                    {activeTab === 'devis' && item.date_validite && (
+                      <View style={styles.detailRow}>
+                        <Clock size={14} color="#6b7280" />
+                        <Text style={styles.itemDate}>
+                          Valide jusqu'au {new Date(item.date_validite).toLocaleDateString('fr-FR')}
+                        </Text>
+                      </View>
+                    )}
+                    {activeTab === 'factures' && item.date_echeance && (
+                      <View style={styles.detailRow}>
+                        <Euro size={14} color="#6b7280" />
+                        <Text style={styles.itemDate}>
+                          Échéance: {new Date(item.date_echeance).toLocaleDateString('fr-FR')}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
 
-                <View style={styles.itemActions}>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleViewDocument(item.id);
-                    }}
-                  >
-                    <Eye size={16} color="#6b7280" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleEditDocument(item.id);
-                    }}
-                  >
-                    <Edit3 size={16} color="#6b7280" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleDownloadDocument(item.id);
-                    }}
-                  >
-                    <Download size={16} color="#6b7280" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleSendDocument(item.id);
-                    }}
-                  >
-                    <Send size={16} color="#6b7280" />
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+                  <View style={styles.itemActions}>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleViewDocument(item.id);
+                      }}
+                    >
+                      <Eye size={16} color="#6b7280" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleEditDocument(item.id);
+                      }}
+                    >
+                      <Edit3 size={16} color="#6b7280" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleDownloadDocument(item.id);
+                      }}
+                    >
+                      <Download size={16} color="#6b7280" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleSendDocument(item.id);
+                      }}
+                    >
+                      <Send size={16} color="#6b7280" />
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </ScrollView>
+      )}
 
       {/* Stats Footer */}
       <View style={styles.statsFooter}>
@@ -342,6 +456,14 @@ export default function Devis() {
           </Text>
         </View>
       </View>
+
+      {/* Upgrade Prompt Modal */}
+      <UpgradePrompt 
+        visible={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+        feature={upgradeFeature}
+        currentPlan={plan?.nom}
+      />
     </View>
   );
 }
@@ -436,9 +558,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#6b7280',
+    position: 'relative',
   },
   activeTabText: {
     color: '#2563eb',
+  },
+  tabLockIcon: {
+    marginLeft: 4,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -606,5 +732,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
+  },
+  upgradeContainer: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'center',
+  },
+  upgradeCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  upgradeTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  upgradeText: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  upgradeButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  upgradeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

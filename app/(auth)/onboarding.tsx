@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
 import { router } from 'expo-router';
 import { ChevronLeft, ChevronRight, User, Building, Upload, Briefcase, Check, Star } from 'lucide-react-native';
-import { useAuth } from '../../src/contexts/AuthContext';
-import { onboardingService } from '../../src/services/onboarding';
+import { useAuth } from '@/contexts/AuthContext';
+import { onboardingService } from '@/services/onboarding';
 
 interface OnboardingData {
   nom: string;
