@@ -21,10 +21,10 @@ if (!supabaseUrl.startsWith('https://') || !supabaseUrl.includes('.supabase.co')
   );
 }
 
-// Validation de la clé API
-if (supabaseAnonKey.length < 100) {
-  throw new Error(
-    'Clé API Supabase invalide. Vérifiez que vous utilisez la clé "anon/public" depuis votre tableau de bord Supabase.'
+// Validation de la clé API - vérification plus souple
+if (!supabaseAnonKey.startsWith('eyJ') || supabaseAnonKey.length < 50) {
+  console.warn(
+    'La clé API Supabase semble invalide. Vérifiez que vous utilisez la clé "anon/public" depuis votre tableau de bord Supabase.'
   );
 }
 
