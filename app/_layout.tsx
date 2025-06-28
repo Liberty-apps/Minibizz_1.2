@@ -2,12 +2,14 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '../src/contexts/AuthContext';
-import * as SplashScreen from 'expo-splash-screen';
+import * as SplashScreen from 'expo-splash-screen'
+import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  useFrameworkReady();
   useEffect(() => {
     // Hide splash screen after layout is ready
     SplashScreen.hideAsync();
