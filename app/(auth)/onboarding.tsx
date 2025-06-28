@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { Building, User, MapPin, Phone, Mail, ArrowRight, CheckCircle, FileText } from 'lucide-react-native';
+import { Building, User, MapPin, Phone, Mail, ArrowRight, CircleCheck as CheckCircle, FileText } from 'lucide-react-native';
 
 export default function Onboarding() {
   const { user } = useAuth();
