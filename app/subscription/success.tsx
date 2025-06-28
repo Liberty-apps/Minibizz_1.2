@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
-import { CheckCircle, ArrowRight, Home } from 'lucide-react-native';
+import { CircleCheck as CheckCircle, ArrowRight, Chrome as Home } from 'lucide-react-native';
 import { stripeService } from '../../src/services/stripe';
 
 export default function SubscriptionSuccess() {
