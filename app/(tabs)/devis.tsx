@@ -1,15 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { 
-  FileText, 
-  Plus, 
-  Search, 
-  Filter,
-  Eye,
-  Edit,
-  Download,
-  Send
-} from 'lucide-react-native';
+import { FileText, Plus, Search, Filter, Eye, CreditCard as Edit, Download, Send } from 'lucide-react-native';
 
 export default function Devis() {
   const [activeTab, setActiveTab] = useState<'devis' | 'factures'>('devis');
