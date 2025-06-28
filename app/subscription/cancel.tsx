@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { XCircle, ArrowLeft, RefreshCw } from 'lucide-react-native';
+import { Circle as XCircle, ArrowLeft, RefreshCw } from 'lucide-react-native';
 
 export default function SubscriptionCancel() {
   const handleGoBack = () => {
