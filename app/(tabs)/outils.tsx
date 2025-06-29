@@ -1,25 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Calculator, Crown, Globe, CircleHelp as HelpCircle, Briefcase, Newspaper, ChevronRight, Zap, Target, Palette, Lock } from 'lucide-react-native';
 import { useSubscription } from '../../src/contexts/SubscriptionContext';
+import UpgradeButton from '../../components/UpgradeButton';
 
 export default function Outils() {
-  const { hasAccess, plan } = useSubscription();
+  const { hasAccess, getCurrentPlan } = useSubscription();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState('');
 
   const handleItemPress = (route: string, feature: string) => {
     if (!hasAccess(feature)) {
-      Alert.alert(
-        'Fonctionnalité Premium',
-        `Cette fonctionnalité nécessite un abonnement Premium. Votre plan actuel : ${plan?.nom || 'Gratuit'}`,
-        [
-          { text: 'Annuler', style: 'cancel' },
-          {
-            text: 'Voir les plans',
-            onPress: () => router.push('/(tabs)/abonnement')
-          }
-        ]
-      );
+      setSelectedFeature(feature);
+      setShowUpgradeModal(true);
       return;
     }
     router.push(route as any);
@@ -115,6 +109,9 @@ export default function Outils() {
     }
   ];
 
+  const currentPlan = getCurrentPlan();
+  const isFreemium = currentPlan === 'Freemium';
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
@@ -123,10 +120,10 @@ export default function Outils() {
         <Text style={styles.subtitle}>
           Tous vos outils de gestion en un seul endroit
         </Text>
-        {plan && (
-          <View style={[styles.planBadge, { backgroundColor: plan.couleur || '#2563eb' }]}>
+        {currentPlan && (
+          <View style={[styles.planBadge, { backgroundColor: isFreemium ? '#6b7280' : '#9333ea' }]}>
             <Crown size={16} color="#ffffff" />
-            <Text style={styles.planText}>{plan.nom}</Text>
+            <Text style={styles.planText}>{currentPlan}</Text>
           </View>
         )}
       </View>
@@ -265,7 +262,7 @@ export default function Outils() {
       </View>
 
       {/* Upgrade Banner */}
-      {(!plan || plan.nom === 'Freemium') && (
+      {isFreemium && (
         <View style={styles.upgradeBanner}>
           <Crown size={24} color="#9333ea" />
           <View style={styles.upgradeContent}>
@@ -274,12 +271,13 @@ export default function Outils() {
               Accédez aux sites vitrines, missions partagées et bien plus encore
             </Text>
           </View>
-          <TouchableOpacity 
+          <UpgradeButton 
+            feature="premium"
+            size="small"
+            variant="primary"
             style={styles.upgradeButton}
-            onPress={() => router.push('/(tabs)/abonnement')}
-          >
-            <Text style={styles.upgradeButtonText}>Upgrader</Text>
-          </TouchableOpacity>
+            textStyle={styles.upgradeButtonText}
+          />
         </View>
       )}
     </ScrollView>
