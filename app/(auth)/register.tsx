@@ -291,21 +291,6 @@ export default function Register() {
               </Link>
             </Text>
           </View>
-
-          {/* Informations de débogage en mode développement */}
-          {__DEV__ && (
-            <View style={styles.debugContainer}>
-              <Text style={styles.debugText}>
-                Mode développement - Vérifiez votre fichier .env
-              </Text>
-              <Text style={styles.debugText}>
-                URL: {process.env.EXPO_PUBLIC_SUPABASE_URL ? '✓ Configurée' : '✗ Manquante'}
-              </Text>
-              <Text style={styles.debugText}>
-                Clé: {process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? '✓ Configurée' : '✗ Manquante'}
-              </Text>
-            </View>
-          )}
         </View>
       </View>
     </View>
@@ -491,18 +476,5 @@ const styles = StyleSheet.create({
   link: {
     color: '#2563eb',
     fontWeight: '500',
-  },
-  debugContainer: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-  },
-  debugText: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 4,
   },
 });
