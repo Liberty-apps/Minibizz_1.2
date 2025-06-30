@@ -27,7 +27,7 @@ interface Template {
 
 export default function SitesVitrines() {
   const { user } = useAuth();
-  const { hasAccess } = useSubscription();
+  const { hasAccess, getCurrentPlan } = useSubscription();
   const [sites, setSites] = useState<SiteVitrine[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -38,6 +38,7 @@ export default function SitesVitrines() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const hasFeatureAccess = hasAccess('sites-vitrines');
+  const currentPlan = getCurrentPlan();
 
   useEffect(() => {
     if (user) {
@@ -87,6 +88,19 @@ export default function SitesVitrines() {
     if (!user) {
       Alert.alert('Erreur', 'Vous devez être connecté pour créer un site');
       router.replace('/(auth)/login');
+      return;
+    }
+
+    // Vérifier si l'utilisateur a accès à cette fonctionnalité
+    if (!hasFeatureAccess) {
+      Alert.alert(
+        'Fonctionnalité Premium',
+        'La création de sites vitrines est disponible uniquement avec l\'abonnement Premium + Site Vitrine.',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Voir les plans', onPress: () => router.push('/(tabs)/abonnement') }
+        ]
+      );
       return;
     }
 
@@ -236,12 +250,44 @@ export default function SitesVitrines() {
             </Text>
           </View>
           <TouchableOpacity 
-            style={styles.addButton}
-            onPress={() => setShowCreateModal(true)}
+            style={[
+              styles.addButton,
+              !hasFeatureAccess && styles.addButtonDisabled
+            ]}
+            onPress={() => {
+              if (hasFeatureAccess) {
+                setShowCreateModal(true);
+              } else {
+                Alert.alert(
+                  'Fonctionnalité Premium',
+                  'La création de sites vitrines est disponible uniquement avec l\'abonnement Premium + Site Vitrine.',
+                  [
+                    { text: 'Annuler', style: 'cancel' },
+                    { text: 'Voir les plans', onPress: () => router.push('/(tabs)/abonnement') }
+                  ]
+                );
+              }
+            }}
           >
             <Plus size={20} color="#ffffff" />
           </TouchableOpacity>
         </View>
+
+        {/* Plan Info Banner */}
+        {!hasFeatureAccess && (
+          <View style={styles.planInfoBanner}>
+            <Crown size={20} color="#9333ea" />
+            <Text style={styles.planInfoText}>
+              La création de sites vitrines est disponible avec le plan <Text style={styles.planHighlight}>Premium + Site Vitrine</Text>
+            </Text>
+            <TouchableOpacity 
+              style={styles.upgradeButton}
+              onPress={() => router.push('/(tabs)/abonnement')}
+            >
+              <Text style={styles.upgradeButtonText}>Upgrader</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Search */}
         {sites.length > 0 && (
@@ -272,12 +318,20 @@ export default function SitesVitrines() {
                 : 'Créez votre premier site vitrine pour présenter votre activité en ligne'
               }
             </Text>
-            {!searchTerm && (
+            {!searchTerm && hasFeatureAccess && (
               <TouchableOpacity 
                 style={styles.createFirstButton}
                 onPress={() => setShowCreateModal(true)}
               >
                 <Text style={styles.createFirstText}>Créer mon premier site</Text>
+              </TouchableOpacity>
+            )}
+            {!searchTerm && !hasFeatureAccess && (
+              <TouchableOpacity 
+                style={styles.createFirstButton}
+                onPress={() => router.push('/(tabs)/abonnement')}
+              >
+                <Text style={styles.createFirstText}>Voir les plans premium</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -554,6 +608,41 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  addButtonDisabled: {
+    backgroundColor: '#9ca3af',
+  },
+  planInfoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#faf5ff',
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9d5ff',
+  },
+  planInfoText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#6b7280',
+    marginLeft: 12,
+  },
+  planHighlight: {
+    fontWeight: 'bold',
+    color: '#9333ea',
+  },
+  upgradeButton: {
+    backgroundColor: '#9333ea',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  upgradeButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
   },
   searchContainer: {
     padding: 16,

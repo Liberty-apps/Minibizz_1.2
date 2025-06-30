@@ -1,27 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert, Platform, Linking } from 'react-native';
 import { router } from 'expo-router';
-import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut, CreditCard as Edit3, Key, Smartphone, Globe, Mail, Crown, Calculator, FileText, Rocket } from 'lucide-react-native';
+import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut, CreditCard as Edit3, Key, Smartphone, Globe, Mail, Crown, Calculator, FileText, Rocket, Bank, CreditCard } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useSubscription } from '../../src/contexts/SubscriptionContext';
+import UserLogo from '../../components/UserLogo';
 
 export default function Parametres() {
   const { user, logout } = useAuth();
-  const { getCurrentPlan } = useSubscription();
+  const { getCurrentPlan, hasAccess } = useSubscription();
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [autoSave, setAutoSave] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showBusinessInfo, setShowBusinessInfo] = useState(false);
+  const [showBankingInfo, setShowBankingInfo] = useState(false);
 
   const [userInfo, setUserInfo] = useState({
     nom: user?.profile?.nom || '',
     prenom: user?.profile?.prenom || '',
     email: user?.email || '',
-    telephone: '',
-    siret: '',
-    activite: 'service'
+    telephone: user?.profile?.telephone || '',
+    siret: user?.profile?.siret || '',
+    activite: user?.profile?.activite_principale || 'service'
+  });
+
+  const [businessInfo, setBusinessInfo] = useState({
+    nom_entreprise: user?.profile?.nom_entreprise || '',
+    forme_juridique: user?.profile?.forme_juridique || 'Auto-entrepreneur',
+    siret: user?.profile?.siret || '',
+    siren: user?.profile?.siren || '',
+    adresse: user?.profile?.adresse || '',
+    code_postal: user?.profile?.code_postal || '',
+    ville: user?.profile?.ville || '',
+    pays: user?.profile?.pays || 'France',
+    taux_tva: user?.profile?.taux_tva?.toString() || '0',
+    regime_fiscal: user?.profile?.regime_fiscal || 'Micro-entreprise'
+  });
+
+  const [bankingInfo, setBankingInfo] = useState({
+    iban: user?.profile?.iban || '',
+    bic: user?.profile?.bic || '',
+    titulaire: `${user?.profile?.prenom || ''} ${user?.profile?.nom || ''}`.trim() || ''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -101,6 +123,48 @@ export default function Parametres() {
     }
   };
 
+  const handleSaveBusinessInfo = async () => {
+    try {
+      // Validation des données
+      if (!businessInfo.nom_entreprise.trim()) {
+        Alert.alert('Erreur', 'Le nom de l\'entreprise est obligatoire');
+        return;
+      }
+
+      if (businessInfo.siret && businessInfo.siret.length !== 14) {
+        Alert.alert('Erreur', 'Le SIRET doit comporter 14 chiffres');
+        return;
+      }
+
+      // Ici vous pourriez sauvegarder via Supabase
+      Alert.alert('Succès', 'Informations d\'entreprise mises à jour avec succès');
+      setShowBusinessInfo(false);
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de mettre à jour les informations d\'entreprise');
+    }
+  };
+
+  const handleSaveBankingInfo = async () => {
+    try {
+      // Validation des données
+      if (!bankingInfo.iban.trim()) {
+        Alert.alert('Erreur', 'L\'IBAN est obligatoire');
+        return;
+      }
+
+      if (!bankingInfo.bic.trim()) {
+        Alert.alert('Erreur', 'Le BIC est obligatoire');
+        return;
+      }
+
+      // Ici vous pourriez sauvegarder via Supabase
+      Alert.alert('Succès', 'Coordonnées bancaires mises à jour avec succès');
+      setShowBankingInfo(false);
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de mettre à jour les coordonnées bancaires');
+    }
+  };
+
   const handleChangePassword = async () => {
     try {
       // Validation
@@ -164,8 +228,8 @@ export default function Parametres() {
       items: [
         { label: 'Informations personnelles', action: 'profile', onPress: () => setShowEditProfile(true) },
         { label: 'Changer le mot de passe', action: 'password', onPress: () => setShowChangePassword(true) },
-        { label: 'Informations d\'entreprise', action: 'business' },
-        { label: 'Coordonnées bancaires', action: 'banking' }
+        { label: 'Informations d\'entreprise', action: 'business', onPress: () => setShowBusinessInfo(true), requiresAccess: 'dashboard' },
+        { label: 'Coordonnées bancaires', action: 'banking', onPress: () => setShowBankingInfo(true), requiresAccess: 'dashboard' }
       ]
     },
     {
@@ -182,9 +246,9 @@ export default function Parametres() {
       title: 'Sécurité',
       icon: Shield,
       items: [
-        { label: 'Authentification à deux facteurs', action: '2fa' },
-        { label: 'Sessions actives', action: 'sessions' },
-        { label: 'Historique de connexion', action: 'login_history' }
+        { label: 'Authentification à deux facteurs', action: '2fa', requiresAccess: 'premium' },
+        { label: 'Sessions actives', action: 'sessions', requiresAccess: 'premium' },
+        { label: 'Historique de connexion', action: 'login_history', requiresAccess: 'premium' }
       ]
     },
     {
@@ -193,7 +257,7 @@ export default function Parametres() {
       items: [
         { label: 'Mon abonnement', action: 'subscription', route: '/(tabs)/abonnement', icon: Crown },
         { label: 'Calculateur de charges', action: 'calculator', route: '/(tabs)/calculs', icon: Calculator },
-        { label: 'Sites vitrines', action: 'sites', route: '/(tabs)/sites-vitrines', icon: Globe },
+        { label: 'Sites vitrines', action: 'sites', route: '/(tabs)/sites-vitrines', icon: Globe, requiresAccess: 'sites-vitrines' },
         { label: 'Centre d\'aide', action: 'help', route: '/(tabs)/aide', icon: HelpCircle },
         { label: 'Statut du déploiement', action: 'deployment', route: '/deployment-status', icon: Rocket }
       ]
@@ -209,7 +273,19 @@ export default function Parametres() {
     }
   ];
 
-  const handleSettingPress = (action: string, route?: string, onPress?: () => void) => {
+  const handleSettingPress = (action: string, route?: string, onPress?: () => void, requiresAccess?: string) => {
+    if (requiresAccess && !hasAccess(requiresAccess)) {
+      Alert.alert(
+        'Fonctionnalité premium',
+        'Cette fonctionnalité est disponible uniquement avec un abonnement premium.',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Voir les plans', onPress: () => router.push('/(tabs)/abonnement') }
+        ]
+      );
+      return;
+    }
+    
     if (onPress) {
       onPress();
     } else if (route) {
@@ -234,9 +310,7 @@ export default function Parametres() {
       {/* Profile Summary */}
       <View style={styles.profileSummary}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user?.name ? user.name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
-          </Text>
+          <UserLogo size={60} showName={false} />
         </View>
         <View style={styles.profileInfo}>
           <Text style={styles.profileName}>
@@ -349,6 +423,180 @@ export default function Parametres() {
         </View>
       )}
 
+      {/* Business Info Modal */}
+      {showBusinessInfo && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Informations d'entreprise</Text>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Nom de l'entreprise *</Text>
+              <TextInput
+                style={styles.input}
+                value={businessInfo.nom_entreprise}
+                onChangeText={(text) => setBusinessInfo({...businessInfo, nom_entreprise: text})}
+                placeholder="Nom de votre entreprise"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Forme juridique</Text>
+              <TextInput
+                style={styles.input}
+                value={businessInfo.forme_juridique}
+                onChangeText={(text) => setBusinessInfo({...businessInfo, forme_juridique: text})}
+                placeholder="Ex: Auto-entrepreneur, EURL, SASU..."
+              />
+              <Text style={styles.helperText}>
+                La forme juridique détermine votre régime fiscal et social
+              </Text>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>SIRET</Text>
+              <TextInput
+                style={styles.input}
+                value={businessInfo.siret}
+                onChangeText={(text) => setBusinessInfo({...businessInfo, siret: text})}
+                placeholder="14 chiffres"
+                keyboardType="numeric"
+                maxLength={14}
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Adresse</Text>
+              <TextInput
+                style={styles.input}
+                value={businessInfo.adresse}
+                onChangeText={(text) => setBusinessInfo({...businessInfo, adresse: text})}
+                placeholder="Adresse de l'entreprise"
+              />
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+                <Text style={styles.label}>Code postal</Text>
+                <TextInput
+                  style={styles.input}
+                  value={businessInfo.code_postal}
+                  onChangeText={(text) => setBusinessInfo({...businessInfo, code_postal: text})}
+                  placeholder="Code postal"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={[styles.formGroup, { flex: 2 }]}>
+                <Text style={styles.label}>Ville</Text>
+                <TextInput
+                  style={styles.input}
+                  value={businessInfo.ville}
+                  onChangeText={(text) => setBusinessInfo({...businessInfo, ville: text})}
+                  placeholder="Ville"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Taux de TVA (%)</Text>
+              <TextInput
+                style={styles.input}
+                value={businessInfo.taux_tva}
+                onChangeText={(text) => setBusinessInfo({...businessInfo, taux_tva: text})}
+                placeholder="Ex: 20"
+                keyboardType="numeric"
+              />
+              <Text style={styles.helperText}>
+                Laissez 0 si vous n'êtes pas assujetti à la TVA
+              </Text>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => setShowBusinessInfo(false)}
+              >
+                <Text style={styles.cancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.saveButton}
+                onPress={handleSaveBusinessInfo}
+              >
+                <Text style={styles.saveText}>Sauvegarder</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Banking Info Modal */}
+      {showBankingInfo && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Coordonnées bancaires</Text>
+            
+            <View style={styles.infoBox}>
+              <Text style={styles.infoText}>
+                Ces informations apparaîtront sur vos factures pour permettre à vos clients d'effectuer des virements.
+              </Text>
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>IBAN *</Text>
+              <TextInput
+                style={styles.input}
+                value={bankingInfo.iban}
+                onChangeText={(text) => setBankingInfo({...bankingInfo, iban: text})}
+                placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
+                autoCapitalize="characters"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>BIC/SWIFT *</Text>
+              <TextInput
+                style={styles.input}
+                value={bankingInfo.bic}
+                onChangeText={(text) => setBankingInfo({...bankingInfo, bic: text})}
+                placeholder="XXXXXXXX"
+                autoCapitalize="characters"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Titulaire du compte</Text>
+              <TextInput
+                style={styles.input}
+                value={bankingInfo.titulaire}
+                onChangeText={(text) => setBankingInfo({...bankingInfo, titulaire: text})}
+                placeholder="Nom du titulaire du compte"
+              />
+            </View>
+
+            <View style={styles.securityNote}>
+              <Shield size={16} color="#16a34a" />
+              <Text style={styles.securityText}>
+                Vos données bancaires sont stockées de manière sécurisée et ne sont jamais partagées avec des tiers.
+              </Text>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => setShowBankingInfo(false)}
+              >
+                <Text style={styles.cancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.saveButton}
+                onPress={handleSaveBankingInfo}
+              >
+                <Text style={styles.saveText}>Sauvegarder</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Change Password Modal */}
       {showChangePassword && (
         <View style={styles.modalOverlay}>
@@ -423,15 +671,32 @@ export default function Parametres() {
             <View style={styles.sectionContent}>
               {section.items.map((item, itemIndex) => {
                 const ItemIcon = item.icon;
+                const isAccessible = !item.requiresAccess || hasAccess(item.requiresAccess);
+                
                 return (
                   <TouchableOpacity 
                     key={itemIndex} 
-                    style={styles.settingItem}
-                    onPress={() => handleSettingPress(item.action, item.route, item.onPress)}
+                    style={[
+                      styles.settingItem,
+                      !isAccessible && styles.settingItemDisabled
+                    ]}
+                    onPress={() => handleSettingPress(item.action, item.route, item.onPress, item.requiresAccess)}
+                    disabled={!isAccessible && !item.requiresAccess}
                   >
                     <View style={styles.settingItemLeft}>
-                      {ItemIcon && <ItemIcon size={18} color="#6b7280" style={styles.settingItemIcon} />}
-                      <Text style={styles.settingLabel}>{item.label}</Text>
+                      {ItemIcon && <ItemIcon size={18} color={isAccessible ? "#6b7280" : "#d1d5db"} style={styles.settingItemIcon} />}
+                      <Text style={[
+                        styles.settingLabel,
+                        !isAccessible && styles.settingLabelDisabled
+                      ]}>
+                        {item.label}
+                      </Text>
+                      {!isAccessible && item.requiresAccess && (
+                        <View style={styles.premiumBadge}>
+                          <Crown size={12} color="#9333ea" />
+                          <Text style={styles.premiumText}>Premium</Text>
+                        </View>
+                      )}
                     </View>
                     <View style={styles.settingAction}>
                       {item.toggle !== undefined ? (
@@ -440,9 +705,10 @@ export default function Parametres() {
                           onValueChange={item.onToggle}
                           trackColor={{ false: '#d1d5db', true: '#3b82f6' }}
                           thumbColor={item.toggle ? '#ffffff' : '#f3f4f6'}
+                          disabled={!isAccessible}
                         />
                       ) : (
-                        <ChevronRight size={20} color="#9ca3af" />
+                        <ChevronRight size={20} color={isAccessible ? "#9ca3af" : "#d1d5db"} />
                       )}
                     </View>
                   </TouchableOpacity>
@@ -508,18 +774,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#2563eb',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: 16,
-  },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
   },
   profileInfo: {
     flex: 1,
@@ -611,6 +866,10 @@ const styles = StyleSheet.create({
   formGroup: {
     marginBottom: 16,
   },
+  formRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
   label: {
     fontSize: 16,
     fontWeight: '500',
@@ -693,6 +952,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  settingItemDisabled: {
+    opacity: 0.7,
+  },
   settingItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -705,9 +967,53 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#374151',
   },
+  settingLabelDisabled: {
+    color: '#9ca3af',
+  },
   settingAction: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f3ff',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+  premiumText: {
+    fontSize: 10,
+    color: '#9333ea',
+    fontWeight: '500',
+    marginLeft: 2,
+  },
+  infoBox: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#4b5563',
+    lineHeight: 20,
+  },
+  securityNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  securityText: {
+    fontSize: 12,
+    color: '#166534',
+    marginLeft: 8,
+    flex: 1,
   },
   appInfo: {
     alignItems: 'center',

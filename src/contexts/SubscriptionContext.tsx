@@ -87,7 +87,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       'planning',
       'calculs',
       'parametres',
-      'aide'
+      'aide',
+      'premium'
     ];
 
     if (basicPremiumFeatures.includes(feature)) {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Lock } from 'lucide-react-native';
+import { Lock, Crown } from 'lucide-react-native';
 import { useSubscription } from '../src/contexts/SubscriptionContext';
 import UpgradeButton from './UpgradeButton';
 
@@ -19,18 +19,32 @@ export default function PremiumFeature({
   description,
   showUpgradeButton = true
 }: PremiumFeatureProps) {
-  const { hasAccess } = useSubscription();
+  const { hasAccess, getCurrentPlan } = useSubscription();
   
   const hasFeatureAccess = hasAccess(feature);
+  const currentPlan = getCurrentPlan();
 
   if (hasFeatureAccess) {
     return <>{children}</>;
   }
 
+  // Déterminer quel plan est nécessaire pour cette fonctionnalité
+  const getRequiredPlan = () => {
+    switch (feature) {
+      case 'sites-vitrines':
+        return 'Premium + Site Vitrine';
+      case 'missions':
+      case 'actualites':
+        return 'Premium + Pack Pro+';
+      default:
+        return 'Premium';
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.lockIconContainer}>
-        <Lock size={40} color="#9333ea" />
+        <Crown size={40} color="#9333ea" />
       </View>
       
       <Text style={styles.title}>{title || 'Fonctionnalité Premium'}</Text>
@@ -38,6 +52,15 @@ export default function PremiumFeature({
       <Text style={styles.description}>
         {description || 'Cette fonctionnalité est disponible uniquement avec un abonnement premium.'}
       </Text>
+      
+      <View style={styles.planInfo}>
+        <Text style={styles.planInfoText}>
+          Votre plan actuel : <Text style={styles.currentPlan}>{currentPlan}</Text>
+        </Text>
+        <Text style={styles.planInfoText}>
+          Plan requis : <Text style={styles.requiredPlan}>{getRequiredPlan()}</Text>
+        </Text>
+      </View>
       
       {showUpgradeButton && (
         <View style={styles.buttonContainer}>
@@ -86,6 +109,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 24,
+  },
+  planInfo: {
+    backgroundColor: '#f5f3ff',
+    padding: 16,
+    borderRadius: 8,
+    width: '100%',
+    marginBottom: 24,
+  },
+  planInfoText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  currentPlan: {
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  requiredPlan: {
+    fontWeight: '600',
+    color: '#9333ea',
   },
   buttonContainer: {
     marginTop: 8,

@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { CircleCheck as CheckCircle, Circle as XCircle, Clock, RefreshCw, ArrowLeft, ExternalLink } from 'lucide-react-native';
+import { useAuth } from '../src/contexts/AuthContext';
+import { useSubscription } from '../src/contexts/SubscriptionContext';
 
 export default function DeploymentStatus() {
+  const { user } = useAuth();
+  const { hasAccess } = useSubscription();
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'in_progress'>('loading');
   const [deploymentInfo, setDeploymentInfo] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +113,25 @@ export default function DeploymentStatus() {
     const remainingSeconds = seconds % 60;
     return `${minutes} min ${remainingSeconds} sec`;
   };
+
+  // Vérifier si l'utilisateur a accès à cette page
+  if (!user || !hasAccess('dashboard')) {
+    return (
+      <View style={styles.authContainer}>
+        <XCircle size={64} color="#dc2626" />
+        <Text style={styles.authTitle}>Accès non autorisé</Text>
+        <Text style={styles.authText}>
+          Vous devez être connecté et avoir un abonnement approprié pour accéder à cette page.
+        </Text>
+        <TouchableOpacity 
+          style={styles.authButton}
+          onPress={() => router.replace('/(tabs)')}
+        >
+          <Text style={styles.authButtonText}>Retour à l'accueil</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -241,6 +264,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9fafb',
+  },
+  authContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    padding: 24,
+  },
+  authTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#dc2626',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  authText: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  authButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  authButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
   },
   header: {
     flexDirection: 'row',
