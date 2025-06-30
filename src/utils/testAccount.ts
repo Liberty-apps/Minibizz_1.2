@@ -1,6 +1,6 @@
 export const TEST_ACCOUNT = {
   email: 'test@minibizz.fr',
-  password: 'TestMiniBizz2024!',
+  password: 'MiniBizz2024!Test#Secure',
   profile: {
     nom: 'Dupont',
     prenom: 'Jean',
