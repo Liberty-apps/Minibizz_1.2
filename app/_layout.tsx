@@ -1,43 +1,47 @@
 import { useEffect } from 'react';
-import { Slot, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
+import { useFrameworkReady } from '../hooks/useFrameworkReady'
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import { AuthProvider } from '../src/contexts/AuthContext';
-import { SubscriptionProvider } from '../src/contexts/SubscriptionContext';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete
+// Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useFrameworkReady();
   
-  useEffect(() => {
-    // Hide splash screen after initialization
-    const hideSplash = async () => {
-      try {
-        await SplashScreen.hideAsync();
-      } catch (error) {
-        console.warn('Erreur lors du masquage du splash screen:', error);
-      }
-    };
+  const [fontsLoaded, fontError] = useFonts({
+    'Inter-Regular': Inter_400Regular,
+    'Inter-Medium': Inter_500Medium,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'Inter-Bold': Inter_700Bold,
+    'Poppins-Regular': Poppins_400Regular,
+    'Poppins-Medium': Poppins_500Medium,
+    'Poppins-SemiBold': Poppins_600SemiBold,
+  });
 
-    // Délai pour permettre l'initialisation
-    setTimeout(hideSplash, 1000);
-  }, []);
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      // Hide the splash screen once fonts are loaded or if there's an error
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  // Return null to keep splash screen visible while fonts load
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
-    <AuthProvider>
-      <SubscriptionProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="deployment-status" options={{ headerShown: false }} />
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </SubscriptionProvider>
-    </AuthProvider>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
+      </Stack>
+      <StatusBar style="auto" />
+    </>
   );
 }

@@ -1,23 +1,22 @@
 import { Link, Stack } from 'expo-router';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
-import { Chrome as Home, ArrowLeft } from 'lucide-react-native';
+import { Home, ArrowLeft } from 'lucide-react-native';
 
 export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
       <View style={styles.container}>
-        <Home size={64} color="#9ca3af" />
-        <Text style={styles.title}>Cette page n'existe pas.</Text>
+        <Text style={styles.title}>Page not found</Text>
         <Text style={styles.subtitle}>
-          La page que vous recherchez est introuvable.
+          The page you're looking for doesn't exist or has been moved.
         </Text>
         
         <View style={styles.actions}>
           <Link href="/" asChild>
             <TouchableOpacity style={styles.primaryButton}>
               <Home size={20} color="#ffffff" />
-              <Text style={styles.primaryButtonText}>Retourner à l'accueil</Text>
+              <Text style={styles.primaryButtonText}>Go to home</Text>
             </TouchableOpacity>
           </Link>
           
@@ -25,16 +24,9 @@ export default function NotFoundScreen() {
             style={styles.secondaryButton}
             onPress={() => window.history.back()}
           >
-            <ArrowLeft size={20} color="#6b7280" />
-            <Text style={styles.secondaryButtonText}>Retour</Text>
+            <ArrowLeft size={20} color="#64748b" />
+            <Text style={styles.secondaryButtonText}>Go back</Text>
           </TouchableOpacity>
-        </View>
-        
-        <View style={styles.helpContainer}>
-          <Text style={styles.helpText}>
-            Besoin d'aide ? Contactez notre support à{' '}
-            <Text style={styles.helpLink}>support@minibizz.fr</Text>
-          </Text>
         </View>
       </View>
     </>
@@ -47,19 +39,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#f8fafc',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#111827',
-    marginTop: 16,
+    color: '#0f172a',
+    fontFamily: 'Inter-Bold',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6b7280',
+    color: '#64748b',
     textAlign: 'center',
+    fontFamily: 'Inter-Regular',
     marginBottom: 32,
   },
   actions: {
@@ -71,7 +64,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2563eb',
+    backgroundColor: '#3b82f6',
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
@@ -80,12 +73,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#ffffff',
+    fontFamily: 'Inter-Medium',
   },
   secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#f1f5f9',
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
@@ -93,18 +87,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#6b7280',
-  },
-  helpContainer: {
-    marginTop: 32,
-  },
-  helpText: {
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-  helpLink: {
-    color: '#2563eb',
-    fontWeight: '500',
+    color: '#64748b',
+    fontFamily: 'Inter-Medium',
   },
 });

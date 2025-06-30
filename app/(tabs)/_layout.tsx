@@ -1,136 +1,50 @@
 import { Tabs } from 'expo-router';
-import { LayoutDashboard, FileText, Users, Calendar, Settings, Calculator } from 'lucide-react-native';
-import { useSubscription } from '../../src/contexts/SubscriptionContext';
-import UserLogo from '../../components/UserLogo';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Home, User, Calendar, Settings, Search } from 'lucide-react-native';
 
 export default function TabLayout() {
-  const { hasAccess } = useSubscription();
-
   return (
     <Tabs
       screenOptions={{
+        tabBarActiveTintColor: '#3b82f6',
+        tabBarInactiveTintColor: '#64748b',
+        tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabBarLabel,
         headerShown: false,
-        tabBarActiveTintColor: '#2563eb',
-        tabBarInactiveTintColor: '#6b7280',
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopColor: '#e5e7eb',
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 80,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ size, color }) => (
-            <LayoutDashboard size={size} color={color} />
-          ),
-        }}
-      />
-      
-      {hasAccess('devis') && (
-        <Tabs.Screen
-          name="devis"
-          options={{
-            title: 'Documents',
-            tabBarIcon: ({ size, color }) => (
-              <FileText size={size} color={color} />
-            ),
-          }}
-        />
-      )}
-      
-      {hasAccess('clients') && (
-        <Tabs.Screen
-          name="clients"
-          options={{
-            title: 'Clients',
-            tabBarIcon: ({ size, color }) => (
-              <Users size={size} color={color} />
-            ),
-          }}
-        />
-      )}
-      
-      {hasAccess('planning') && (
-        <Tabs.Screen
-          name="planning"
-          options={{
-            title: 'Planning',
-            tabBarIcon: ({ size, color }) => (
-              <Calendar size={size} color={color} />
-            ),
-          }}
-        />
-      )}
-      
-      <Tabs.Screen
-        name="outils"
-        options={{
-          title: 'Outils',
-          tabBarIcon: ({ size, color }) => (
-            <Calculator size={size} color={color} />
-          ),
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="parametres"
+        name="explore"
         options={{
-          title: 'Paramètres',
-          tabBarIcon: ({ size, color }) => (
-            <Settings size={size} color={color} />
-          ),
-        }}
-      />
-      
-      {/* Pages cachées de la navigation principale */}
-      <Tabs.Screen
-        name="calculs"
-        options={{
-          href: null, // Cache cet onglet de la navigation
+          title: 'Explore',
+          tabBarIcon: ({ color, size }) => <Search size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="abonnement"
+        name="calendar"
         options={{
-          href: null, // Cache cet onglet de la navigation
+          title: 'Calendar',
+          tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="sites-vitrines"
+        name="profile"
         options={{
-          href: null, // Cache cet onglet de la navigation
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="aide"
+        name="settings"
         options={{
-          href: null, // Cache cet onglet de la navigation
-        }}
-      />
-      <Tabs.Screen
-        name="missions"
-        options={{
-          href: null, // Cache cet onglet de la navigation
-        }}
-      />
-      <Tabs.Screen
-        name="actualites"
-        options={{
-          href: null, // Cache cet onglet de la navigation
-        }}
-      />
-      <Tabs.Screen
-        name="devis-optimized"
-        options={{
-          href: null, // Cache cet onglet de la navigation
+          title: 'Settings',
+          tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
         }}
       />
     </Tabs>
@@ -138,10 +52,16 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  tabBar: {
+    backgroundColor: '#ffffff',
+    borderTopColor: '#e2e8f0',
+    paddingTop: 10,
+    paddingBottom: 10,
+    height: 60,
+  },
+  tabBarLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    marginBottom: 4,
   },
 });
