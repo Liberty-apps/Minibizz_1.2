@@ -54,16 +54,30 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const hasAccess = (feature: string): boolean => {
     if (!user) return false;
     
+    // For debugging - log the feature being checked
+    console.log(`Checking access for feature: ${feature}`);
+    
     // If no active subscription, user has freemium access
     if (!subscription || !stripeService.isSubscriptionActive(subscription.subscription_status)) {
-      return checkFreemiumAccess(feature);
+      const hasAccess = checkFreemiumAccess(feature);
+      console.log(`Freemium access for ${feature}: ${hasAccess}`);
+      return hasAccess;
     }
 
     // Find the current product
     const currentProduct = stripeConfig.products.find(p => p.priceId === subscription.price_id);
-    if (!currentProduct) return checkFreemiumAccess(feature);
+    if (!currentProduct) {
+      const hasAccess = checkFreemiumAccess(feature);
+      console.log(`No product found, defaulting to freemium access for ${feature}: ${hasAccess}`);
+      return hasAccess;
+    }
 
-    return checkPremiumAccess(currentProduct.name, feature);
+    // Log the current plan for debugging
+    console.log(`Current plan: ${currentProduct.name}`);
+    
+    const hasAccess = checkPremiumAccess(currentProduct.name, feature);
+    console.log(`Premium access for ${feature} with plan ${currentProduct.name}: ${hasAccess}`);
+    return hasAccess;
   };
 
   const checkFreemiumAccess = (feature: string): boolean => {
@@ -97,7 +111,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       return true;
     }
 
-    // Plan-specific features
+    // Fix: Always grant access to sites-vitrines for any Premium plan
+    // This is a temporary fix to ensure all premium users can access the site feature
+    if (feature === 'sites-vitrines' && planName.includes('Premium')) {
+      return true;
+    }
+
+    // Plan-specific features - original logic
     if (planName.includes('Pack Pro')) {
       const packProFeatures = [
         'missions',

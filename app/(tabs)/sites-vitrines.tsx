@@ -36,9 +36,12 @@ export default function SitesVitrines() {
   const [sousdomaine, setSousdomaine] = useState('');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
+  // Check access and log for debugging
   const hasFeatureAccess = hasAccess('sites-vitrines');
   const currentPlan = getCurrentPlan();
+  console.log('Sites Vitrines Access Check:', { hasFeatureAccess, currentPlan });
 
   useEffect(() => {
     if (user) {
@@ -53,15 +56,25 @@ export default function SitesVitrines() {
     if (!user) return;
     
     try {
+      setLoading(true);
+      setError(null);
+      
+      // Log the user ID for debugging
+      console.log('Loading sites for user ID:', user.id);
+      
       const [sitesData, templatesData] = await Promise.all([
         sitesService.getUserSites(user.id),
         sitesService.getTemplates()
       ]);
       
+      console.log('Loaded sites:', sitesData.length);
+      console.log('Loaded templates:', templatesData.length);
+      
       setSites(sitesData);
       setTemplates(templatesData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors du chargement:', error);
+      setError(`Impossible de charger les sites: ${error.message}`);
       Alert.alert('Erreur', 'Impossible de charger les sites');
     } finally {
       setLoading(false);
@@ -117,6 +130,7 @@ export default function SitesVitrines() {
       const isAvailable = await sitesService.checkSubdomainAvailability(sousdomaine.trim().toLowerCase());
       if (!isAvailable) {
         Alert.alert('Erreur', 'Ce sous-domaine est déjà utilisé. Veuillez en choisir un autre.');
+        setLoading(false);
         return;
       }
 
@@ -234,12 +248,10 @@ export default function SitesVitrines() {
     );
   }
 
-  return (
-    <PremiumFeature 
-      feature="sites-vitrines"
-      title="Sites Vitrines"
-      description="Créez facilement votre site vitrine professionnel pour présenter votre activité en ligne. Avec un éditeur simple, des templates prêts à l'emploi et un hébergement inclus."
-    >
+  // Afficher directement le contenu si l'utilisateur a accès
+  // Cela contourne le composant PremiumFeature pour les utilisateurs premium
+  if (hasFeatureAccess) {
+    return (
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -250,41 +262,22 @@ export default function SitesVitrines() {
             </Text>
           </View>
           <TouchableOpacity 
-            style={[
-              styles.addButton,
-              !hasFeatureAccess && styles.addButtonDisabled
-            ]}
-            onPress={() => {
-              if (hasFeatureAccess) {
-                setShowCreateModal(true);
-              } else {
-                Alert.alert(
-                  'Fonctionnalité Premium',
-                  'La création de sites vitrines est disponible uniquement avec l\'abonnement Premium + Site Vitrine.',
-                  [
-                    { text: 'Annuler', style: 'cancel' },
-                    { text: 'Voir les plans', onPress: () => router.push('/(tabs)/abonnement') }
-                  ]
-                );
-              }
-            }}
+            style={styles.addButton}
+            onPress={() => setShowCreateModal(true)}
           >
             <Plus size={20} color="#ffffff" />
           </TouchableOpacity>
         </View>
 
-        {/* Plan Info Banner */}
-        {!hasFeatureAccess && (
-          <View style={styles.planInfoBanner}>
-            <Crown size={20} color="#9333ea" />
-            <Text style={styles.planInfoText}>
-              La création de sites vitrines est disponible avec le plan <Text style={styles.planHighlight}>Premium + Site Vitrine</Text>
-            </Text>
+        {/* Error Display */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity 
-              style={styles.upgradeButton}
-              onPress={() => router.push('/(tabs)/abonnement')}
+              style={styles.retryButton}
+              onPress={loadData}
             >
-              <Text style={styles.upgradeButtonText}>Upgrader</Text>
+              <Text style={styles.retryButtonText}>Réessayer</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -318,20 +311,12 @@ export default function SitesVitrines() {
                 : 'Créez votre premier site vitrine pour présenter votre activité en ligne'
               }
             </Text>
-            {!searchTerm && hasFeatureAccess && (
+            {!searchTerm && (
               <TouchableOpacity 
                 style={styles.createFirstButton}
                 onPress={() => setShowCreateModal(true)}
               >
                 <Text style={styles.createFirstText}>Créer mon premier site</Text>
-              </TouchableOpacity>
-            )}
-            {!searchTerm && !hasFeatureAccess && (
-              <TouchableOpacity 
-                style={styles.createFirstButton}
-                onPress={() => router.push('/(tabs)/abonnement')}
-              >
-                <Text style={styles.createFirstText}>Voir les plans premium</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -406,7 +391,13 @@ export default function SitesVitrines() {
                   {site.statut === 'publie' && (
                     <TouchableOpacity 
                       style={styles.visitButton}
-                      onPress={() => Alert.alert('Visite', 'Fonctionnalité en cours de développement')}
+                      onPress={() => {
+                        const url = site.domaine_personnalise || `https://${site.sous_domaine}.minibizz.fr`;
+                        Alert.alert('Visite du site', `Ouverture de ${url}`, [
+                          { text: 'Annuler', style: 'cancel' },
+                          { text: 'Visiter', onPress: () => window.open(url, '_blank') }
+                        ]);
+                      }}
                     >
                       <ExternalLink size={16} color="#2563eb" />
                       <Text style={styles.visitText}>Visiter</Text>
@@ -532,6 +523,19 @@ export default function SitesVitrines() {
           </View>
         </View>
       </ScrollView>
+    );
+  }
+
+  // Fallback to PremiumFeature component for non-premium users
+  return (
+    <PremiumFeature 
+      feature="sites-vitrines"
+      title="Sites Vitrines"
+      description="Créez facilement votre site vitrine professionnel pour présenter votre activité en ligne. Avec un éditeur simple, des templates prêts à l'emploi et un hébergement inclus."
+    >
+      <View style={styles.container}>
+        {/* Content will never be shown as PremiumFeature will block it */}
+      </View>
     </PremiumFeature>
   );
 }
@@ -956,5 +960,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     lineHeight: 20,
+  },
+  errorContainer: {
+    margin: 16,
+    padding: 16,
+    backgroundColor: '#fef2f2',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  retryButton: {
+    backgroundColor: '#dc2626',
+    padding: 8,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
