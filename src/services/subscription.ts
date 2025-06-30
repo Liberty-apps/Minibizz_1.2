@@ -246,9 +246,13 @@ export const subscriptionService = {
         .from('plans')
         .select('id')
         .eq('nom', planName)
-        .single();
+        .maybeSingle();
         
       if (planError) throw planError;
+      
+      if (!planData) {
+        throw new Error(`Plan "${planName}" non trouvé dans la base de données. Veuillez vérifier que le plan existe.`);
+      }
       
       // Vérifier si l'utilisateur a déjà un abonnement
       const { data: existingSubscription, error: subError } = await supabase
