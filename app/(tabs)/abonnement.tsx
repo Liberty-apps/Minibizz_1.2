@@ -17,6 +17,7 @@ import {
 import { useAuth } from '../../src/contexts/AuthContext';
 import { stripeService, type SubscriptionData } from '../../src/services/stripe';
 import { stripeConfig, type StripeProduct } from '../../src/stripe-config';
+import { subscriptionService } from '../../src/services/subscription';
 
 export default function Abonnement() {
   const { user } = useAuth();
@@ -50,6 +51,25 @@ export default function Abonnement() {
     try {
       setSubscribing(product.id);
       
+      // Pour les besoins de la démo, nous allons simuler un changement de plan
+      // sans passer par Stripe (qui nécessiterait une configuration complète)
+      await subscriptionService.updateUserPlan(user.id, product.name);
+      
+      Alert.alert(
+        'Abonnement activé',
+        `Votre abonnement ${product.name} a été activé avec succès.`,
+        [
+          { 
+            text: 'OK', 
+            onPress: () => {
+              loadSubscription();
+            }
+          }
+        ]
+      );
+      
+      // Dans une implémentation réelle avec Stripe, on utiliserait ce code :
+      /*
       const { url } = await stripeService.createCheckoutSession({
         priceId: product.priceId,
         mode: product.mode,
@@ -59,6 +79,7 @@ export default function Abonnement() {
         // Redirect to Stripe Checkout
         window.location.href = url;
       }
+      */
     } catch (error: any) {
       console.error('Erreur souscription:', error);
       Alert.alert('Erreur', error.message || 'Impossible de créer la session de paiement');

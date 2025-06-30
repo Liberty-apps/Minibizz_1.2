@@ -236,5 +236,63 @@ export const subscriptionService = {
 
     if (error) throw error;
     return data || [];
+  },
+  
+  // Mettre à jour manuellement le plan d'un utilisateur (pour les tests)
+  async updateUserPlan(userId: string, planName: string) {
+    try {
+      // Récupérer l'ID du plan
+      const { data: planData, error: planError } = await supabase
+        .from('plans')
+        .select('id')
+        .eq('nom', planName)
+        .single();
+        
+      if (planError) throw planError;
+      
+      // Vérifier si l'utilisateur a déjà un abonnement
+      const { data: existingSubscription, error: subError } = await supabase
+        .from('abonnements')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+        
+      if (subError && subError.code !== 'PGRST116') throw subError;
+      
+      if (existingSubscription) {
+        // Mettre à jour l'abonnement existant
+        const { error: updateError } = await supabase
+          .from('abonnements')
+          .update({
+            plan_id: planData.id,
+            statut: 'actif',
+            date_debut: new Date().toISOString().split('T')[0],
+            date_fin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingSubscription.id);
+          
+        if (updateError) throw updateError;
+      } else {
+        // Créer un nouvel abonnement
+        const { error: insertError } = await supabase
+          .from('abonnements')
+          .insert({
+            user_id: userId,
+            plan_id: planData.id,
+            statut: 'actif',
+            type_facturation: 'mensuel',
+            date_debut: new Date().toISOString().split('T')[0],
+            date_fin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          });
+          
+        if (insertError) throw insertError;
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du plan:', error);
+      throw error;
+    }
   }
 };

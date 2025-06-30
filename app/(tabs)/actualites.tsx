@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { Newspaper, Calendar, User, ChevronRight, ExternalLink, Bookmark, Share2 } from 'lucide-react-native';
+import { Newspaper, Calendar, User, ChevronRight, ExternalLink, Bookmark, Share2, Briefcase, DollarSign, MapPin } from 'lucide-react-native';
 import { useSubscription } from '../../src/contexts/SubscriptionContext';
 import PremiumFeature from '../../components/PremiumFeature';
 

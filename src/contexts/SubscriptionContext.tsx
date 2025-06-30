@@ -33,6 +33,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     try {
       setIsLoading(true);
       const subscriptionData = await stripeService.getUserSubscription();
+      console.log("Loaded subscription data:", subscriptionData);
       setSubscription(subscriptionData);
     } catch (error) {
       console.error('Erreur lors du chargement de l\'abonnement:', error);
@@ -72,7 +73,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       'devis_basic',
       'planning_basic',
       'calculs',
-      'aide'
+      'aide',
+      'premium'
     ];
     return freemiumFeatures.includes(feature);
   };
