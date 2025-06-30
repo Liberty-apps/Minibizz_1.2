@@ -116,6 +116,7 @@ export const subscriptionService = {
         'devis_basic',
         'planning_basic',
         'calculs',
+        'aide',
         'premium'
       ],
       'premium standard': [
