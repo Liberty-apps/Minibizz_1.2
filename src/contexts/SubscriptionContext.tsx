@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { stripeService, type SubscriptionData } from '../services/stripe';
 import { stripeConfig } from '../stripe-config';
+import { subscriptionService } from '../services/subscription';
 
 interface SubscriptionContextType {
   subscription: SubscriptionData | null;
@@ -9,6 +10,7 @@ interface SubscriptionContextType {
   isLoading: boolean;
   refreshSubscription: () => Promise<void>;
   getCurrentPlan: () => string;
+  updatePlan: (planName: string) => Promise<void>;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -33,7 +35,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     try {
       setIsLoading(true);
       const subscriptionData = await stripeService.getUserSubscription();
-      console.log("Loaded subscription data:", subscriptionData);
       setSubscription(subscriptionData);
     } catch (error) {
       console.error('Erreur lors du chargement de l\'abonnement:', error);
@@ -51,33 +52,34 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return currentProduct?.name || 'Premium';
   };
 
+  const updatePlan = async (planName: string): Promise<void> => {
+    if (!user) throw new Error('Utilisateur non connecté');
+    
+    try {
+      setIsLoading(true);
+      await subscriptionService.updateUserPlan(user.id, planName);
+      await loadSubscription();
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du plan:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const hasAccess = (feature: string): boolean => {
     if (!user) return false;
     
-    // For debugging - log the feature being checked
-    console.log(`Checking access for feature: ${feature}`);
-    
     // If no active subscription, user has freemium access
     if (!subscription || !stripeService.isSubscriptionActive(subscription.subscription_status)) {
-      const hasAccess = checkFreemiumAccess(feature);
-      console.log(`Freemium access for ${feature}: ${hasAccess}`);
-      return hasAccess;
+      return checkFreemiumAccess(feature);
     }
 
     // Find the current product
     const currentProduct = stripeConfig.products.find(p => p.priceId === subscription.price_id);
-    if (!currentProduct) {
-      const hasAccess = checkFreemiumAccess(feature);
-      console.log(`No product found, defaulting to freemium access for ${feature}: ${hasAccess}`);
-      return hasAccess;
-    }
+    if (!currentProduct) return checkFreemiumAccess(feature);
 
-    // Log the current plan for debugging
-    console.log(`Current plan: ${currentProduct.name}`);
-    
-    const hasAccess = checkPremiumAccess(currentProduct.name, feature);
-    console.log(`Premium access for ${feature} with plan ${currentProduct.name}: ${hasAccess}`);
-    return hasAccess;
+    return checkPremiumAccess(currentProduct.name, feature);
   };
 
   const checkFreemiumAccess = (feature: string): boolean => {
@@ -111,13 +113,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       return true;
     }
 
-    // Fix: Always grant access to sites-vitrines for any Premium plan
-    // This is a temporary fix to ensure all premium users can access the site feature
-    if (feature === 'sites-vitrines' && planName.includes('Premium')) {
-      return true;
-    }
-
-    // Plan-specific features - original logic
+    // Plan-specific features
     if (planName.includes('Pack Pro')) {
       const packProFeatures = [
         'missions',
@@ -150,7 +146,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       hasAccess,
       isLoading,
       refreshSubscription,
-      getCurrentPlan
+      getCurrentPlan,
+      updatePlan
     }}>
       {children}
     </SubscriptionContext.Provider>

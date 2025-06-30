@@ -130,7 +130,7 @@ export const subscriptionService = {
         'aide',
         'premium'
       ],
-      'premium + pack pro+': [
+      'premium + pack pro': [
         'dashboard',
         'clients',
         'devis',

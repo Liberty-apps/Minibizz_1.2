@@ -24,12 +24,6 @@ export default function PremiumFeature({
   const hasFeatureAccess = hasAccess(feature);
   const currentPlan = getCurrentPlan();
 
-  // Debug information
-  console.log(`PremiumFeature check for ${feature}:`, { 
-    hasFeatureAccess, 
-    currentPlan 
-  });
-
   if (hasFeatureAccess) {
     return <>{children}</>;
   }
@@ -41,9 +35,9 @@ export default function PremiumFeature({
         return 'Premium + Site Vitrine';
       case 'missions':
       case 'actualites':
-        return 'Premium + Pack Pro+';
+        return 'Premium + Pack Pro';
       default:
-        return 'Premium';
+        return 'Premium Standard';
     }
   };
 

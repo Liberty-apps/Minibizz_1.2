@@ -15,32 +15,14 @@ import {
   ExternalLink
 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { stripeService, type SubscriptionData } from '../../src/services/stripe';
+import { useSubscription } from '../../src/contexts/SubscriptionContext';
 import { stripeConfig, type StripeProduct } from '../../src/stripe-config';
-import { subscriptionService } from '../../src/services/subscription';
 
 export default function Abonnement() {
   const { user } = useAuth();
-  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { subscription, getCurrentPlan, updatePlan } = useSubscription();
   const [subscribing, setSubscribing] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadSubscription();
-  }, []);
-
-  const loadSubscription = async () => {
-    try {
-      setLoading(true);
-      const subscriptionData = await stripeService.getUserSubscription();
-      setSubscription(subscriptionData);
-    } catch (error) {
-      console.error('Erreur lors du chargement:', error);
-      Alert.alert('Erreur', 'Impossible de charger les informations d\'abonnement');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleSubscribe = async (product: StripeProduct) => {
     if (!user) {
@@ -51,35 +33,13 @@ export default function Abonnement() {
     try {
       setSubscribing(product.id);
       
-      // Pour les besoins de la démo, nous allons simuler un changement de plan
-      // sans passer par Stripe (qui nécessiterait une configuration complète)
-      await subscriptionService.updateUserPlan(user.id, product.name);
+      // Mettre à jour le plan de l'utilisateur
+      await updatePlan(product.name);
       
       Alert.alert(
         'Abonnement activé',
-        `Votre abonnement ${product.name} a été activé avec succès.`,
-        [
-          { 
-            text: 'OK', 
-            onPress: () => {
-              loadSubscription();
-            }
-          }
-        ]
+        `Votre abonnement ${product.name} a été activé avec succès.`
       );
-      
-      // Dans une implémentation réelle avec Stripe, on utiliserait ce code :
-      /*
-      const { url } = await stripeService.createCheckoutSession({
-        priceId: product.priceId,
-        mode: product.mode,
-      });
-
-      if (url) {
-        // Redirect to Stripe Checkout
-        window.location.href = url;
-      }
-      */
     } catch (error: any) {
       console.error('Erreur souscription:', error);
       Alert.alert('Erreur', error.message || 'Impossible de créer la session de paiement');
@@ -94,6 +54,9 @@ export default function Abonnement() {
   };
 
   const isCurrentPlan = (product: StripeProduct): boolean => {
+    if (product.name === 'Freemium' && getCurrentPlan() === 'Freemium') {
+      return true;
+    }
     return subscription?.price_id === product.priceId;
   };
 
@@ -104,16 +67,8 @@ export default function Abonnement() {
     return Star;
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Chargement...</Text>
-      </View>
-    );
-  }
-
   const currentProduct = getCurrentProduct();
+  const currentPlanName = getCurrentPlan();
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -127,50 +82,41 @@ export default function Abonnement() {
       </View>
 
       {/* Current Subscription */}
-      {subscription && stripeService.isSubscriptionActive(subscription.subscription_status) && (
-        <View style={styles.currentSubscription}>
-          <Text style={styles.currentTitle}>Votre abonnement actuel</Text>
-          <View style={styles.currentCard}>
-            <View style={styles.currentInfo}>
-              <View style={styles.currentHeader}>
-                <Text style={styles.currentPlan}>
-                  {currentProduct?.name || 'Plan Premium'}
+      <View style={styles.currentSubscription}>
+        <Text style={styles.currentTitle}>Votre abonnement actuel</Text>
+        <View style={styles.currentCard}>
+          <View style={styles.currentInfo}>
+            <View style={styles.currentHeader}>
+              <Text style={styles.currentPlan}>
+                {currentPlanName}
+              </Text>
+              <View style={[
+                styles.statusBadge,
+                { backgroundColor: currentPlanName !== 'Freemium' ? '#16a34a' : '#6b7280' }
+              ]}>
+                <Text style={styles.statusText}>
+                  {currentPlanName !== 'Freemium' ? 'Actif' : 'Gratuit'}
                 </Text>
-                <View style={[
-                  styles.statusBadge,
-                  { backgroundColor: stripeService.isSubscriptionActive(subscription.subscription_status) ? '#16a34a' : '#dc2626' }
-                ]}>
-                  <Text style={styles.statusText}>
-                    {stripeService.isSubscriptionActive(subscription.subscription_status) ? 'Actif' : subscription.subscription_status}
-                  </Text>
-                </View>
               </View>
-              
-              {subscription.current_period_end && (
-                <Text style={styles.currentExpiry}>
-                  {stripeService.isSubscriptionCanceling(subscription.cancel_at_period_end) 
-                    ? 'Expire le' 
-                    : 'Renouvellement le'
-                  } : {stripeService.formatDate(subscription.current_period_end)}
-                </Text>
-              )}
-
-              {subscription.payment_method_brand && subscription.payment_method_last4 && (
-                <Text style={styles.currentPayment}>
-                  Paiement: {subscription.payment_method_brand.toUpperCase()} •••• {subscription.payment_method_last4}
-                </Text>
-              )}
             </View>
             
+            {subscription?.current_period_end && (
+              <Text style={styles.currentExpiry}>
+                Renouvellement le : {new Date(subscription.current_period_end * 1000).toLocaleDateString('fr-FR')}
+              </Text>
+            )}
+          </View>
+          
+          {currentPlanName !== 'Freemium' && (
             <View style={styles.currentActions}>
               <TouchableOpacity style={styles.manageButton}>
                 <CreditCard size={20} color="#2563eb" />
                 <Text style={styles.manageText}>Gérer</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          )}
         </View>
-      )}
+      </View>
 
       {/* Plans Grid */}
       <View style={styles.plansContainer}>
@@ -205,9 +151,11 @@ export default function Abonnement() {
               {/* Price */}
               <View style={styles.priceContainer}>
                 <Text style={styles.price}>
-                  {stripeService.formatPrice(product.price)}
+                  {product.price === 0 ? 'Gratuit' : `${product.price}€`}
                 </Text>
-                <Text style={styles.priceUnit}>/{product.interval}</Text>
+                {product.price > 0 && (
+                  <Text style={styles.priceUnit}>/{product.interval}</Text>
+                )}
               </View>
 
               {/* Features */}
@@ -285,6 +233,31 @@ export default function Abonnement() {
           Tous les plans incluent un support client et des mises à jour gratuites
         </Text>
       </View>
+
+      {/* Contact Support */}
+      <View style={styles.supportSection}>
+        <Text style={styles.supportTitle}>Besoin d'aide ?</Text>
+        <Text style={styles.supportText}>
+          Notre équipe est disponible pour répondre à vos questions sur les abonnements.
+        </Text>
+        <TouchableOpacity 
+          style={styles.supportButton}
+          onPress={() => {
+            // Ouvrir un email vers le support
+            const email = 'support@minibizz.fr';
+            const subject = 'Question sur les abonnements';
+            const body = 'Bonjour,\n\nJ\'ai une question concernant les abonnements MiniBizz.\n\n';
+            
+            const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            
+            if (typeof window !== 'undefined') {
+              window.open(mailtoLink, '_blank');
+            }
+          }}
+        >
+          <Text style={styles.supportButtonText}>Contacter le support</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -293,17 +266,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9fafb',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginTop: 12,
   },
   header: {
     alignItems: 'center',
@@ -370,10 +332,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginBottom: 4,
-  },
-  currentPayment: {
-    fontSize: 14,
-    color: '#6b7280',
   },
   currentActions: {
     flexDirection: 'row',
@@ -517,7 +475,6 @@ const styles = StyleSheet.create({
   },
   faqSection: {
     padding: 16,
-    paddingBottom: 32,
   },
   faqTitle: {
     fontSize: 20,
@@ -563,5 +520,41 @@ const styles = StyleSheet.create({
     color: '#1e40af',
     marginLeft: 8,
     flex: 1,
+  },
+  supportSection: {
+    backgroundColor: '#ffffff',
+    margin: 16,
+    marginBottom: 32,
+    padding: 20,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    alignItems: 'center',
+  },
+  supportTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  supportText: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  supportButton: {
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  supportButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#2563eb',
   },
 });
