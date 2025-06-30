@@ -246,6 +246,8 @@ export const subscriptionService = {
   // Mettre à jour manuellement le plan d'un utilisateur (pour les tests)
   async updateUserPlan(userId: string, planName: string) {
     try {
+      console.log(`Updating user ${userId} to plan: ${planName}`);
+      
       // Récupérer l'ID du plan
       const { data: planData, error: planError } = await supabase
         .from('plans')
@@ -259,6 +261,8 @@ export const subscriptionService = {
         throw new Error(`Plan "${planName}" non trouvé dans la base de données. Veuillez vérifier que le plan existe.`);
       }
       
+      console.log(`Found plan ID: ${planData.id}`);
+      
       // Vérifier si l'utilisateur a déjà un abonnement
       const { data: existingSubscription, error: subError } = await supabase
         .from('abonnements')
@@ -269,6 +273,8 @@ export const subscriptionService = {
       if (subError && subError.code !== 'PGRST116') throw subError;
       
       if (existingSubscription) {
+        console.log(`Updating existing subscription: ${existingSubscription.id}`);
+        
         // Mettre à jour l'abonnement existant
         const { error: updateError } = await supabase
           .from('abonnements')
@@ -283,6 +289,8 @@ export const subscriptionService = {
           
         if (updateError) throw updateError;
       } else {
+        console.log(`Creating new subscription for user: ${userId}`);
+        
         // Créer un nouvel abonnement
         const { error: insertError } = await supabase
           .from('abonnements')
@@ -298,6 +306,7 @@ export const subscriptionService = {
         if (insertError) throw insertError;
       }
       
+      console.log('Plan update successful');
       return { success: true };
     } catch (error) {
       console.error('Erreur lors de la mise à jour du plan:', error);
