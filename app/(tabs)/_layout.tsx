@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
 import { LayoutDashboard, FileText, Users, Calendar, Settings, Calculator } from 'lucide-react-native';
 import { useSubscription } from '../../src/contexts/SubscriptionContext';
+import UserLogo from '../../components/UserLogo';
+import { View, StyleSheet } from 'react-native';
 
 export default function TabLayout() {
   const { hasAccess } = useSubscription();
@@ -134,3 +136,12 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+});

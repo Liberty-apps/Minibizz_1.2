@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { FileText, Users, Euro, TrendingUp, Calendar, Plus, ArrowRight, Calculator, Crown, Globe, CircleAlert as AlertCircle, Clock, CircleCheck as CheckCircle, ChartBar as BarChart3 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { dashboardService } from '../../src/services/database';
+import UserLogo from '../../components/UserLogo';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -179,8 +180,8 @@ export default function Dashboard() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Bonjour {user?.name || 'Utilisateur'} ! 👋</Text>
+        <View style={styles.headerContent}>
+          <UserLogo />
           <Text style={styles.title}>Tableau de bord</Text>
         </View>
         <View style={styles.dateContainer}>
@@ -388,6 +389,9 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     backgroundColor: '#ffffff',
   },
+  headerContent: {
+    flex: 1,
+  },
   greeting: {
     fontSize: 16,
     color: '#6b7280',
@@ -397,6 +401,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#111827',
+    marginTop: 8,
   },
   dateContainer: {
     flexDirection: 'row',
