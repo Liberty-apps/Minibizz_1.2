@@ -4,6 +4,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ChevronLeft, Save, Plus, Trash2, User, Calendar, Clock, FileText, CreditCard as Edit3 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { devisService, clientsService } from '../../src/services/database';
+import { supabase } from '../../src/lib/supabase';
 
 export default function CreateDevis() {
   const { numero } = useLocalSearchParams();
@@ -36,6 +37,7 @@ export default function CreateDevis() {
   useEffect(() => {
     if (user) {
       loadClients();
+      generateDevisNumero();
     }
   }, [user]);
 
@@ -51,6 +53,19 @@ export default function CreateDevis() {
       Alert.alert('Erreur', 'Impossible de charger la liste des clients');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateDevisNumero = async () => {
+    if (!user) return;
+    
+    try {
+      if (!devisData.numero) {
+        const newNumero = await devisService.generateNumero(user.id);
+        setDevisData(prev => ({ ...prev, numero: newNumero }));
+      }
+    } catch (error) {
+      console.error('Erreur lors de la génération du numéro de devis:', error);
     }
   };
 
@@ -134,7 +149,10 @@ export default function CreateDevis() {
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {
+      Alert.alert('Erreur', 'Vous devez être connecté pour créer un devis');
+      return;
+    }
     
     const validationError = validateForm();
     if (validationError) {
@@ -146,25 +164,36 @@ export default function CreateDevis() {
       setSaving(true);
       
       // Créer le devis
-      const devis = await devisService.create({
-        user_id: user.id,
-        client_id: devisData.client_id,
-        numero: devisData.numero,
-        date_emission: devisData.date_emission,
-        date_validite: devisData.date_validite,
-        objet: devisData.objet,
-        conditions_particulieres: devisData.conditions_particulieres,
-        statut: devisData.statut
-      });
+      const { data: devis, error } = await supabase
+        .from('devis')
+        .insert({
+          user_id: user.id,
+          client_id: devisData.client_id,
+          numero: devisData.numero,
+          date_emission: devisData.date_emission,
+          date_validite: devisData.date_validite,
+          objet: devisData.objet,
+          conditions_particulieres: devisData.conditions_particulieres,
+          statut: devisData.statut
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
       
       // Ajouter les lignes
       for (const ligne of lignes) {
-        await devisService.addLine(devis.id, {
-          description: ligne.description,
-          quantite: parseFloat(ligne.quantite.toString()) || 1,
-          prix_unitaire: parseFloat(ligne.prix_unitaire.toString()) || 0,
-          taux_tva: parseFloat(ligne.taux_tva.toString()) || 0
-        });
+        const { error: ligneError } = await supabase
+          .from('devis_lignes')
+          .insert({
+            devis_id: devis.id,
+            description: ligne.description,
+            quantite: parseFloat(ligne.quantite.toString()) || 1,
+            prix_unitaire: parseFloat(ligne.prix_unitaire.toString()) || 0,
+            taux_tva: parseFloat(ligne.taux_tva.toString()) || 0
+          });
+        
+        if (ligneError) throw ligneError;
       }
       
       Alert.alert(
@@ -173,13 +202,13 @@ export default function CreateDevis() {
         [
           {
             text: 'OK',
-            onPress: () => router.replace(`/devis/${devis.id}`)
+            onPress: () => router.replace('/(tabs)/devis')
           }
         ]
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la création du devis:', error);
-      Alert.alert('Erreur', 'Impossible de créer le devis');
+      Alert.alert('Erreur', 'Impossible de créer le devis: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -215,38 +244,42 @@ export default function CreateDevis() {
           <View style={styles.formGroup}>
             <Text style={styles.label}>Client *</Text>
             <View style={styles.selectContainer}>
-              {clients.map(client => (
-                <TouchableOpacity
-                  key={client.id}
-                  style={[
-                    styles.clientOption,
-                    devisData.client_id === client.id && styles.clientOptionSelected
-                  ]}
-                  onPress={() => setDevisData({...devisData, client_id: client.id})}
-                >
-                  <View style={styles.clientAvatar}>
-                    <Text style={styles.clientAvatarText}>
-                      {client.prenom ? client.prenom.charAt(0) : ''}
-                      {client.nom ? client.nom.charAt(0) : ''}
-                    </Text>
-                  </View>
-                  <View style={styles.clientInfo}>
-                    <Text style={styles.clientName}>
-                      {client.type_client === 'entreprise' 
-                        ? client.entreprise 
-                        : `${client.prenom || ''} ${client.nom || ''}`.trim()}
-                    </Text>
-                    {client.email && (
-                      <Text style={styles.clientEmail}>{client.email}</Text>
-                    )}
-                  </View>
-                  {devisData.client_id === client.id && (
-                    <View style={styles.clientSelected}>
-                      <Text style={styles.clientSelectedText}>✓</Text>
+              {clients.length === 0 ? (
+                <Text style={styles.noClientsText}>Aucun client disponible. Veuillez d'abord créer un client.</Text>
+              ) : (
+                clients.map(client => (
+                  <TouchableOpacity
+                    key={client.id}
+                    style={[
+                      styles.clientOption,
+                      devisData.client_id === client.id && styles.clientOptionSelected
+                    ]}
+                    onPress={() => setDevisData({...devisData, client_id: client.id})}
+                  >
+                    <View style={styles.clientAvatar}>
+                      <Text style={styles.clientAvatarText}>
+                        {client.prenom ? client.prenom.charAt(0) : ''}
+                        {client.nom ? client.nom.charAt(0) : ''}
+                      </Text>
                     </View>
-                  )}
-                </TouchableOpacity>
-              ))}
+                    <View style={styles.clientInfo}>
+                      <Text style={styles.clientName}>
+                        {client.type_client === 'entreprise' 
+                          ? client.entreprise 
+                          : `${client.prenom || ''} ${client.nom || ''}`.trim()}
+                      </Text>
+                      {client.email && (
+                        <Text style={styles.clientEmail}>{client.email}</Text>
+                      )}
+                    </View>
+                    {devisData.client_id === client.id && (
+                      <View style={styles.clientSelected}>
+                        <Text style={styles.clientSelectedText}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
               
               <TouchableOpacity 
                 style={styles.addClientButton}
@@ -556,6 +589,12 @@ const styles = StyleSheet.create({
   },
   selectContainer: {
     gap: 8,
+  },
+  noClientsText: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontStyle: 'italic',
+    marginBottom: 12,
   },
   clientOption: {
     flexDirection: 'row',

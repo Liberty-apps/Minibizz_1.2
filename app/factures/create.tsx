@@ -4,6 +4,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ChevronLeft, Save, Plus, Trash2, User, Calendar, Clock, FileText, CreditCard as Edit3, Euro } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { facturesService, clientsService, devisService } from '../../src/services/database';
+import { supabase } from '../../src/lib/supabase';
 
 export default function CreateFacture() {
   const { numero } = useLocalSearchParams();
@@ -38,6 +39,7 @@ export default function CreateFacture() {
   useEffect(() => {
     if (user) {
       loadData();
+      generateFactureNumero();
     }
   }, [user]);
 
@@ -58,6 +60,19 @@ export default function CreateFacture() {
       Alert.alert('Erreur', 'Impossible de charger les données nécessaires');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateFactureNumero = async () => {
+    if (!user) return;
+    
+    try {
+      if (!factureData.numero) {
+        const newNumero = await facturesService.generateNumero(user.id);
+        setFactureData(prev => ({ ...prev, numero: newNumero }));
+      }
+    } catch (error) {
+      console.error('Erreur lors de la génération du numéro de facture:', error);
     }
   };
 
@@ -101,7 +116,14 @@ export default function CreateFacture() {
       });
       
       // Récupérer les lignes du devis
-      const devisLignes = await devisService.getLines(devisId);
+      const { data: devisLignes, error } = await supabase
+        .from('devis_lignes')
+        .select('*')
+        .eq('devis_id', devisId)
+        .order('ordre', { ascending: true });
+      
+      if (error) throw error;
+      
       if (devisLignes && devisLignes.length > 0) {
         setLignes(devisLignes.map(ligne => ({
           description: ligne.description,
@@ -170,7 +192,10 @@ export default function CreateFacture() {
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {
+      Alert.alert('Erreur', 'Vous devez être connecté pour créer une facture');
+      return;
+    }
     
     const validationError = validateForm();
     if (validationError) {
@@ -182,26 +207,37 @@ export default function CreateFacture() {
       setSaving(true);
       
       // Créer la facture
-      const facture = await facturesService.create({
-        user_id: user.id,
-        client_id: factureData.client_id,
-        devis_id: factureData.devis_id || null,
-        numero: factureData.numero,
-        date_emission: factureData.date_emission,
-        date_echeance: factureData.date_echeance,
-        objet: factureData.objet,
-        statut: factureData.statut,
-        mode_paiement: factureData.mode_paiement
-      });
+      const { data: facture, error } = await supabase
+        .from('factures')
+        .insert({
+          user_id: user.id,
+          client_id: factureData.client_id,
+          devis_id: factureData.devis_id || null,
+          numero: factureData.numero,
+          date_emission: factureData.date_emission,
+          date_echeance: factureData.date_echeance,
+          objet: factureData.objet,
+          statut: factureData.statut,
+          mode_paiement: factureData.mode_paiement
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
       
       // Ajouter les lignes
       for (const ligne of lignes) {
-        await facturesService.addLine(facture.id, {
-          description: ligne.description,
-          quantite: parseFloat(ligne.quantite.toString()) || 1,
-          prix_unitaire: parseFloat(ligne.prix_unitaire.toString()) || 0,
-          taux_tva: parseFloat(ligne.taux_tva.toString()) || 0
-        });
+        const { error: ligneError } = await supabase
+          .from('factures_lignes')
+          .insert({
+            facture_id: facture.id,
+            description: ligne.description,
+            quantite: parseFloat(ligne.quantite.toString()) || 1,
+            prix_unitaire: parseFloat(ligne.prix_unitaire.toString()) || 0,
+            taux_tva: parseFloat(ligne.taux_tva.toString()) || 0
+          });
+        
+        if (ligneError) throw ligneError;
       }
       
       Alert.alert(
@@ -210,13 +246,13 @@ export default function CreateFacture() {
         [
           {
             text: 'OK',
-            onPress: () => router.replace(`/factures/${facture.id}`)
+            onPress: () => router.replace('/(tabs)/devis')
           }
         ]
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la création de la facture:', error);
-      Alert.alert('Erreur', 'Impossible de créer la facture');
+      Alert.alert('Erreur', 'Impossible de créer la facture: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -252,38 +288,42 @@ export default function CreateFacture() {
           <View style={styles.formGroup}>
             <Text style={styles.label}>Client *</Text>
             <View style={styles.selectContainer}>
-              {clients.map(client => (
-                <TouchableOpacity
-                  key={client.id}
-                  style={[
-                    styles.clientOption,
-                    factureData.client_id === client.id && styles.clientOptionSelected
-                  ]}
-                  onPress={() => setFactureData({...factureData, client_id: client.id})}
-                >
-                  <View style={styles.clientAvatar}>
-                    <Text style={styles.clientAvatarText}>
-                      {client.prenom ? client.prenom.charAt(0) : ''}
-                      {client.nom ? client.nom.charAt(0) : ''}
-                    </Text>
-                  </View>
-                  <View style={styles.clientInfo}>
-                    <Text style={styles.clientName}>
-                      {client.type_client === 'entreprise' 
-                        ? client.entreprise 
-                        : `${client.prenom || ''} ${client.nom || ''}`.trim()}
-                    </Text>
-                    {client.email && (
-                      <Text style={styles.clientEmail}>{client.email}</Text>
-                    )}
-                  </View>
-                  {factureData.client_id === client.id && (
-                    <View style={styles.clientSelected}>
-                      <Text style={styles.clientSelectedText}>✓</Text>
+              {clients.length === 0 ? (
+                <Text style={styles.noClientsText}>Aucun client disponible. Veuillez d'abord créer un client.</Text>
+              ) : (
+                clients.map(client => (
+                  <TouchableOpacity
+                    key={client.id}
+                    style={[
+                      styles.clientOption,
+                      factureData.client_id === client.id && styles.clientOptionSelected
+                    ]}
+                    onPress={() => setFactureData({...factureData, client_id: client.id})}
+                  >
+                    <View style={styles.clientAvatar}>
+                      <Text style={styles.clientAvatarText}>
+                        {client.prenom ? client.prenom.charAt(0) : ''}
+                        {client.nom ? client.nom.charAt(0) : ''}
+                      </Text>
                     </View>
-                  )}
-                </TouchableOpacity>
-              ))}
+                    <View style={styles.clientInfo}>
+                      <Text style={styles.clientName}>
+                        {client.type_client === 'entreprise' 
+                          ? client.entreprise 
+                          : `${client.prenom || ''} ${client.nom || ''}`.trim()}
+                      </Text>
+                      {client.email && (
+                        <Text style={styles.clientEmail}>{client.email}</Text>
+                      )}
+                    </View>
+                    {factureData.client_id === client.id && (
+                      <View style={styles.clientSelected}>
+                        <Text style={styles.clientSelectedText}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
               
               <TouchableOpacity 
                 style={styles.addClientButton}
@@ -602,6 +642,12 @@ const styles = StyleSheet.create({
   },
   selectContainer: {
     gap: 8,
+  },
+  noClientsText: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontStyle: 'italic',
+    marginBottom: 12,
   },
   clientOption: {
     flexDirection: 'row',

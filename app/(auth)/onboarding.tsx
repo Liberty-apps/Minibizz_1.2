@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert,
 import { router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { Building, User, MapPin, Phone, Mail, ArrowRight, CircleCheck as CheckCircle, FileText } from 'lucide-react-native';
+import { supabase } from '../../src/lib/supabase';
 
 export default function Onboarding() {
   const { user } = useAuth();
@@ -11,24 +12,24 @@ export default function Onboarding() {
   
   const [formData, setFormData] = useState({
     // Informations personnelles
-    nom: '',
-    prenom: '',
-    telephone: '',
+    nom: user?.profile?.nom || '',
+    prenom: user?.profile?.prenom || '',
+    telephone: user?.profile?.telephone || '',
     
     // Informations entreprise
-    activite_principale: '',
-    forme_juridique: 'Auto-entrepreneur',
-    siret: '',
+    activite_principale: user?.profile?.activite_principale || '',
+    forme_juridique: user?.profile?.forme_juridique || 'Auto-entrepreneur',
+    siret: user?.profile?.siret || '',
     
     // Adresse
-    adresse: '',
-    code_postal: '',
-    ville: '',
-    pays: 'France',
+    adresse: user?.profile?.adresse || '',
+    code_postal: user?.profile?.code_postal || '',
+    ville: user?.profile?.ville || '',
+    pays: user?.profile?.pays || 'France',
     
     // Paramètres fiscaux
-    taux_tva: '0',
-    regime_fiscal: 'Micro-entreprise'
+    taux_tva: user?.profile?.taux_tva?.toString() || '0',
+    regime_fiscal: user?.profile?.regime_fiscal || 'Micro-entreprise'
   });
 
   const totalSteps = 3;
@@ -73,11 +74,38 @@ export default function Onboarding() {
   };
 
   const handleComplete = async () => {
+    if (!user) {
+      Alert.alert('Erreur', 'Utilisateur non connecté');
+      return;
+    }
+    
     try {
       setLoading(true);
       
-      // Ici vous pourriez sauvegarder les données du profil
-      // await profileService.updateProfile(user.id, formData);
+      // Sauvegarder les données du profil
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          nom: formData.nom,
+          prenom: formData.prenom,
+          telephone: formData.telephone,
+          activite_principale: formData.activite_principale,
+          forme_juridique: formData.forme_juridique,
+          siret: formData.siret,
+          adresse: formData.adresse,
+          code_postal: formData.code_postal,
+          ville: formData.ville,
+          pays: formData.pays,
+          taux_tva: parseFloat(formData.taux_tva) || 0,
+          regime_fiscal: formData.regime_fiscal,
+          onboarding_completed: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        throw error;
+      }
       
       Alert.alert(
         'Configuration terminée !',
@@ -89,8 +117,9 @@ export default function Onboarding() {
           }
         ]
       );
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible de sauvegarder votre profil');
+    } catch (error: any) {
+      console.error('Erreur lors de la sauvegarde du profil:', error);
+      Alert.alert('Erreur', 'Impossible de sauvegarder votre profil. ' + error.message);
     } finally {
       setLoading(false);
     }

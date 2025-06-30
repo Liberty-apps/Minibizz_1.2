@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { Calendar, Plus, Clock, User, MapPin, ChevronLeft, ChevronRight, Filter, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Circle as XCircle, Phone, Video, Users as UsersIcon } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { planningService } from '../../src/services/database';
+import { supabase } from '../../src/lib/supabase';
 
 export default function Planning() {
   const { user } = useAuth();
@@ -12,6 +13,16 @@ export default function Planning() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    titre: '',
+    description: '',
+    date_debut: new Date().toISOString(),
+    date_fin: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours later
+    lieu: '',
+    type_evenement: 'rdv',
+    statut: 'planifie'
+  });
 
   useEffect(() => {
     loadEvents();
@@ -113,7 +124,65 @@ export default function Planning() {
   };
 
   const handleAddEvent = () => {
-    router.push('/planning/create');
+    setShowAddEvent(true);
+  };
+
+  const handleSaveEvent = async () => {
+    if (!user) {
+      Alert.alert('Erreur', 'Vous devez être connecté pour créer un événement');
+      return;
+    }
+    
+    if (!newEvent.titre.trim()) {
+      Alert.alert('Erreur', 'Le titre est obligatoire');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Créer l'événement
+      const { data, error } = await supabase
+        .from('planning')
+        .insert({
+          user_id: user.id,
+          titre: newEvent.titre,
+          description: newEvent.description,
+          date_debut: newEvent.date_debut,
+          date_fin: newEvent.date_fin,
+          lieu: newEvent.lieu,
+          type_evenement: newEvent.type_evenement,
+          statut: newEvent.statut
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Réinitialiser le formulaire
+      setNewEvent({
+        titre: '',
+        description: '',
+        date_debut: new Date().toISOString(),
+        date_fin: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        lieu: '',
+        type_evenement: 'rdv',
+        statut: 'planifie'
+      });
+      
+      // Fermer le modal
+      setShowAddEvent(false);
+      
+      // Recharger les événements
+      loadEvents();
+      
+      Alert.alert('Succès', 'Événement créé avec succès');
+    } catch (error: any) {
+      console.error('Erreur lors de la création de l\'événement:', error);
+      Alert.alert('Erreur', 'Impossible de créer l\'événement: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEventPress = (eventId: string) => {
@@ -159,7 +228,7 @@ export default function Planning() {
 
   const filteredEvents = getFilteredEvents();
 
-  if (loading) {
+  if (loading && !showAddEvent) {
     return (
       <View style={styles.loadingContainer}>
         <Calendar size={48} color="#2563eb" />
@@ -255,6 +324,119 @@ export default function Planning() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Add Event Modal */}
+      {showAddEvent && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Nouvel événement</Text>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Titre *</Text>
+              <TextInput
+                style={styles.input}
+                value={newEvent.titre}
+                onChangeText={(text) => setNewEvent({...newEvent, titre: text})}
+                placeholder="Titre de l'événement"
+              />
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Description</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={newEvent.description}
+                onChangeText={(text) => setNewEvent({...newEvent, description: text})}
+                placeholder="Description de l'événement"
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+            
+            <View style={styles.formRow}>
+              <View style={[styles.formGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Date</Text>
+                <TouchableOpacity style={styles.dateInput}>
+                  <Calendar size={16} color="#6b7280" />
+                  <Text style={styles.dateText}>
+                    {new Date(newEvent.date_debut).toLocaleDateString('fr-FR')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={[styles.formGroup, { flex: 1, marginLeft: 12 }]}>
+                <Text style={styles.label}>Heure</Text>
+                <TouchableOpacity style={styles.dateInput}>
+                  <Clock size={16} color="#6b7280" />
+                  <Text style={styles.dateText}>
+                    {new Date(newEvent.date_debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Lieu</Text>
+              <TextInput
+                style={styles.input}
+                value={newEvent.lieu}
+                onChangeText={(text) => setNewEvent({...newEvent, lieu: text})}
+                placeholder="Lieu de l'événement"
+              />
+            </View>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Type d'événement</Text>
+              <View style={styles.typeContainer}>
+                <TouchableOpacity 
+                  style={[
+                    styles.typeOption,
+                    newEvent.type_evenement === 'rdv' && styles.typeOptionSelected
+                  ]}
+                  onPress={() => setNewEvent({...newEvent, type_evenement: 'rdv'})}
+                >
+                  <Text style={[
+                    styles.typeText,
+                    newEvent.type_evenement === 'rdv' && styles.typeTextSelected
+                  ]}>
+                    Rendez-vous
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.typeOption,
+                    newEvent.type_evenement === 'prestation' && styles.typeOptionSelected
+                  ]}
+                  onPress={() => setNewEvent({...newEvent, type_evenement: 'prestation'})}
+                >
+                  <Text style={[
+                    styles.typeText,
+                    newEvent.type_evenement === 'prestation' && styles.typeTextSelected
+                  ]}>
+                    Prestation
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => setShowAddEvent(false)}
+              >
+                <Text style={styles.cancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.saveButton}
+                onPress={handleSaveEvent}
+              >
+                <Text style={styles.saveText}>Enregistrer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Events List */}
       <ScrollView style={styles.eventsContainer} showsVerticalScrollIndicator={false}>
@@ -634,5 +816,124 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 12,
     color: '#6b7280',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    margin: 16,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 20,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  formRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#111827',
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#ffffff',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#111827',
+    marginLeft: 8,
+  },
+  typeContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  typeOption: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+  },
+  typeOptionSelected: {
+    borderColor: '#2563eb',
+    backgroundColor: '#eff6ff',
+  },
+  typeText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  typeTextSelected: {
+    color: '#2563eb',
+    fontWeight: '500',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 20,
+  },
+  cancelButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+  },
+  cancelText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  saveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#2563eb',
+  },
+  saveText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#ffffff',
   },
 });
