@@ -19,24 +19,16 @@ export default function DeploymentStatus() {
     try {
       setStatus('loading');
       
-      // Simulate API call to check deployment status
-      // In a real app, this would be an actual API call to your deployment service
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the deployment status endpoint
+      const response = await fetch('/api/deployment-status');
       
-      // Mock deployment data - replace with actual API call
-      const mockDeployment = {
-        id: 'deploy-123456',
-        status: Math.random() > 0.3 ? 'success' : (Math.random() > 0.5 ? 'in_progress' : 'error'),
-        url: 'https://minibizz-demo.netlify.app',
-        created_at: new Date().toISOString(),
-        branch: 'main',
-        commit_message: 'Added Stripe integration',
-        build_time: Math.floor(Math.random() * 120) + 30, // 30-150 seconds
-        error_message: 'Build failed due to missing environment variables',
-      };
+      if (!response.ok) {
+        throw new Error(`Failed to fetch deployment status: ${response.status}`);
+      }
       
-      setDeploymentInfo(mockDeployment);
-      setStatus(mockDeployment.status as any);
+      const data = await response.json();
+      setDeploymentInfo(data);
+      setStatus(data.status);
       setLastChecked(new Date());
     } catch (err: any) {
       console.error('Error checking deployment status:', err);
