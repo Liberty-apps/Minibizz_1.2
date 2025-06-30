@@ -8,6 +8,23 @@ interface AuthUser extends User {
   profile?: {
     nom?: string;
     prenom?: string;
+    telephone?: string;
+    adresse?: string;
+    code_postal?: string;
+    ville?: string;
+    pays?: string;
+    siret?: string;
+    siren?: string;
+    activite_principale?: string;
+    forme_juridique?: string;
+    date_creation_entreprise?: string;
+    taux_tva?: number;
+    regime_fiscal?: string;
+    logo_url?: string;
+    signature_url?: string;
+    iban?: string;
+    bic?: string;
+    onboarding_completed?: boolean;
   };
   name?: string;
 }
@@ -56,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('nom, prenom, onboarding_completed')
+        .select('*')
         .eq('id', authUser.id)
         .maybeSingle();
 
@@ -75,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: authUser.email!,
               onboarding_completed: false,
             })
-            .select('nom, prenom, onboarding_completed')
+            .select('*')
             .single();
 
           if (createError) {

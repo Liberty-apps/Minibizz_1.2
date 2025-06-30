@@ -115,7 +115,8 @@ export const subscriptionService = {
         'clients_basic',
         'devis_basic',
         'planning_basic',
-        'calculs'
+        'calculs',
+        'premium'
       ],
       'premium standard': [
         'dashboard',
@@ -125,7 +126,8 @@ export const subscriptionService = {
         'planning',
         'calculs',
         'parametres',
-        'aide'
+        'aide',
+        'premium'
       ],
       'premium + pack pro+': [
         'dashboard',
@@ -138,7 +140,8 @@ export const subscriptionService = {
         'aide',
         'missions',
         'actualites',
-        'analytics'
+        'analytics',
+        'premium'
       ],
       'premium + site vitrine': [
         'dashboard',
@@ -150,7 +153,8 @@ export const subscriptionService = {
         'parametres',
         'aide',
         'sites-vitrines',
-        'domaine-personnalise'
+        'domaine-personnalise',
+        'premium'
       ]
     };
 

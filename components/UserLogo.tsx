@@ -52,7 +52,7 @@ export default function UserLogo({ size = 32, showName = true }: UserLogoProps) 
         <Text style={styles.greeting}>
           Bonjour{' '}
           <Text style={styles.userName}>
-            {user?.name || user?.email?.split('@')[0] || 'Utilisateur'}
+            {user?.profile?.prenom || user?.name || user?.email?.split('@')[0] || 'Utilisateur'}
           </Text>
           {' '}!
         </Text>
