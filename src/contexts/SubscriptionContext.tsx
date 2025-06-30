@@ -35,21 +35,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     try {
       setIsLoading(true);
       const subscriptionData = await stripeService.getUserSubscription();
+      console.log("Loaded subscription data:", subscriptionData);
       setSubscription(subscriptionData);
     } catch (error) {
       console.error('Erreur lors du chargement de l\'abonnement:', error);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const getCurrentPlan = (): string => {
-    if (!subscription || !stripeService.isSubscriptionActive(subscription.subscription_status)) {
-      return 'Freemium';
-    }
-
-    const currentProduct = stripeConfig.products.find(p => p.priceId === subscription.price_id);
-    return currentProduct?.name || 'Premium';
   };
 
   const updatePlan = async (planName: string): Promise<void> => {
@@ -67,8 +59,21 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   };
 
+  const getCurrentPlan = (): string => {
+    if (!subscription || !stripeService.isSubscriptionActive(subscription.subscription_status)) {
+      return 'Freemium';
+    }
+
+    const currentProduct = stripeConfig.products.find(p => p.priceId === subscription.price_id);
+    return currentProduct?.name || 'Premium Standard';
+  };
+
   const hasAccess = (feature: string): boolean => {
     if (!user) return false;
+    
+    // For debugging
+    console.log(`Checking access for feature: ${feature}`);
+    console.log(`Current plan: ${getCurrentPlan()}`);
     
     // If no active subscription, user has freemium access
     if (!subscription || !stripeService.isSubscriptionActive(subscription.subscription_status)) {
@@ -79,6 +84,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     const currentProduct = stripeConfig.products.find(p => p.priceId === subscription.price_id);
     if (!currentProduct) return checkFreemiumAccess(feature);
 
+    // For debugging
+    console.log(`Current product: ${currentProduct.name}`);
+    
     return checkPremiumAccess(currentProduct.name, feature);
   };
 
@@ -130,6 +138,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         'sites-vitrines',
         'domaine-personnalise'
       ];
+      
+      // For debugging
+      console.log(`Checking if ${feature} is in Site Vitrine features`);
+      console.log(`Site Vitrine features: ${siteVitrineFeatures}`);
+      console.log(`Result: ${siteVitrineFeatures.includes(feature)}`);
+      
       return siteVitrineFeatures.includes(feature);
     }
 

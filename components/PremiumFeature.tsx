@@ -24,6 +24,9 @@ export default function PremiumFeature({
   const hasFeatureAccess = hasAccess(feature);
   const currentPlan = getCurrentPlan();
 
+  // For debugging
+  console.log(`PremiumFeature check for ${feature}:`, { hasFeatureAccess, currentPlan });
+
   if (hasFeatureAccess) {
     return <>{children}</>;
   }

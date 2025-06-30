@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Globe, Plus, Eye, CreditCard as Edit3, Settings, Trash2, ExternalLink, Palette, LayoutGrid as Layout, Image as ImageIcon, Search, Crown } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -832,6 +832,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     color: '#111827',
+    backgroundColor: '#ffffff',
   },
   urlInput: {
     flexDirection: 'row',
@@ -839,6 +840,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderRadius: 8,
+    backgroundColor: '#ffffff',
   },
   subdomainInput: {
     flex: 1,
