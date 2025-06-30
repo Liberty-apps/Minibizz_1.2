@@ -64,6 +64,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Erreur lors du chargement du profil:', error);
       }
 
+      // Si aucun profil n'existe, créer un profil de base
+      if (!profile) {
+        console.log('Aucun profil trouvé, création d\'un profil de base...');
+        try {
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: authUser.id,
+              email: authUser.email!,
+              onboarding_completed: false,
+            })
+            .select('nom, prenom, onboarding_completed')
+            .single();
+
+          if (createError) {
+            console.error('Erreur lors de la création du profil:', createError);
+            // Continuer avec un profil de base même si la création échoue
+            const userWithProfile: AuthUser = {
+              ...authUser,
+              name: authUser.email?.split('@')[0] || 'Utilisateur'
+            };
+            setUser(userWithProfile);
+            return;
+          }
+
+          const userWithProfile: AuthUser = {
+            ...authUser,
+            profile: newProfile || undefined,
+            name: newProfile?.nom ? `${newProfile.prenom || ''} ${newProfile.nom}`.trim() : authUser.email?.split('@')[0] || 'Utilisateur'
+          };
+
+          setUser(userWithProfile);
+
+          // Rediriger vers l'onboarding pour le nouveau profil
+          router.replace('/(auth)/onboarding');
+          return;
+        } catch (createError) {
+          console.error('Erreur lors de la création du profil:', createError);
+          // Continuer avec un profil de base même si la création échoue
+          const userWithProfile: AuthUser = {
+            ...authUser,
+            name: authUser.email?.split('@')[0] || 'Utilisateur'
+          };
+          setUser(userWithProfile);
+          return;
+        }
+      }
+
       const userWithProfile: AuthUser = {
         ...authUser,
         profile: profile || undefined,
