@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
-import { Home, User, Calendar, Settings, Search } from 'lucide-react-native';
+import { Home, FileText, Calendar, Users, Settings } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -15,35 +15,35 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Accueil',
           tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="clients"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color, size }) => <Search size={size} color={color} />,
+          title: 'Clients',
+          tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="calendar"
+        name="devis"
         options={{
-          title: 'Calendar',
+          title: 'Devis',
+          tabBarIcon: ({ color, size }) => <FileText size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="planning"
+        options={{
+          title: 'Planning',
           tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="parametres"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
+          title: 'Paramètres',
           tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
         }}
       />

@@ -1,25 +1,69 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
-import { Bell, ChevronRight, TrendingUp, Calendar, Users, FileText } from 'lucide-react-native';
+import { Bell, ChevronRight, TrendingUp, Calendar, Users, FileText, Plus, CreditCard } from 'lucide-react-native';
+import { useAuth } from '../../src/contexts/AuthContext';
+import { dashboardService } from '../../src/services/database';
+import UserLogo from '../../components/UserLogo';
 
 export default function HomeScreen() {
+  const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+  const [stats, setStats] = useState({
+    clients: 0,
+    devis: 0,
+    factures: 0,
+    chiffreAffaires: 0
+  });
+  const [recentActivity, setRecentActivity] = useState({
+    devis: [],
+    factures: [],
+    clients: []
+  });
+  const [loading, setLoading] = useState(true);
 
-  const onRefresh = () => {
+  useEffect(() => {
+    if (user) {
+      loadDashboardData();
+    }
+  }, [user]);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      if (!user) return;
+      
+      const [statsData, activityData] = await Promise.all([
+        dashboardService.getStats(user.id),
+        dashboardService.getRecentActivity(user.id)
+      ]);
+      
+      setStats(statsData);
+      setRecentActivity(activityData);
+    } catch (error) {
+      console.error('Erreur chargement dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    // Simulate data fetching
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
+    await loadDashboardData();
+    setRefreshing(false);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Good morning,</Text>
-          <Text style={styles.username}>Alex</Text>
+        <View style={styles.headerLeft}>
+          <UserLogo />
         </View>
         <TouchableOpacity style={styles.notificationButton}>
           <Bell size={24} color="#0f172a" />
@@ -38,154 +82,156 @@ export default function HomeScreen() {
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <View style={styles.statIconContainer}>
-              <TrendingUp size={20} color="#3b82f6" />
+              <Users size={20} color="#3b82f6" />
             </View>
-            <Text style={styles.statValue}>$2,458</Text>
-            <Text style={styles.statLabel}>Revenue</Text>
-          </View>
-          
-          <View style={styles.statCard}>
-            <View style={[styles.statIconContainer, { backgroundColor: '#dbeafe' }]}>
-              <Users size={20} color="#2563eb" />
-            </View>
-            <Text style={styles.statValue}>12</Text>
+            <Text style={styles.statValue}>{stats.clients}</Text>
             <Text style={styles.statLabel}>Clients</Text>
           </View>
           
           <View style={styles.statCard}>
+            <View style={[styles.statIconContainer, { backgroundColor: '#dbeafe' }]}>
+              <FileText size={20} color="#2563eb" />
+            </View>
+            <Text style={styles.statValue}>{stats.devis}</Text>
+            <Text style={styles.statLabel}>Devis</Text>
+          </View>
+          
+          <View style={styles.statCard}>
             <View style={[styles.statIconContainer, { backgroundColor: '#dcfce7' }]}>
-              <FileText size={20} color="#16a34a" />
+              <CreditCard size={20} color="#16a34a" />
             </View>
-            <Text style={styles.statValue}>8</Text>
-            <Text style={styles.statLabel}>Projects</Text>
+            <Text style={styles.statValue}>{stats.factures}</Text>
+            <Text style={styles.statLabel}>Factures</Text>
           </View>
         </View>
 
-        {/* Upcoming Events */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
-            <TouchableOpacity style={styles.seeAllButton}>
-              <Text style={styles.seeAllText}>See All</Text>
-              <ChevronRight size={16} color="#3b82f6" />
-            </TouchableOpacity>
+        {/* CA Overview */}
+        <View style={styles.caContainer}>
+          <View style={styles.caHeader}>
+            <Text style={styles.caTitle}>Chiffre d'affaires</Text>
+            <Text style={styles.caSubtitle}>Ce mois-ci</Text>
           </View>
-
-          <View style={styles.eventCard}>
-            <View style={styles.eventDateContainer}>
-              <Text style={styles.eventMonth}>JUN</Text>
-              <Text style={styles.eventDay}>15</Text>
-            </View>
-            <View style={styles.eventDetails}>
-              <Text style={styles.eventTitle}>Client Meeting</Text>
-              <Text style={styles.eventDescription}>Project discussion with ABC Corp</Text>
-              <View style={styles.eventTimeContainer}>
-                <Calendar size={14} color="#64748b" />
-                <Text style={styles.eventTime}>10:00 AM - 11:30 AM</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.eventCard}>
-            <View style={styles.eventDateContainer}>
-              <Text style={styles.eventMonth}>JUN</Text>
-              <Text style={styles.eventDay}>18</Text>
-            </View>
-            <View style={styles.eventDetails}>
-              <Text style={styles.eventTitle}>Project Deadline</Text>
-              <Text style={styles.eventDescription}>Website redesign final delivery</Text>
-              <View style={styles.eventTimeContainer}>
-                <Calendar size={14} color="#64748b" />
-                <Text style={styles.eventTime}>11:59 PM</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Recent Projects */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Projects</Text>
-            <TouchableOpacity style={styles.seeAllButton}>
-              <Text style={styles.seeAllText}>See All</Text>
-              <ChevronRight size={16} color="#3b82f6" />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.projectsScrollView}
-          >
-            <View style={styles.projectCard}>
-              <Image 
-                source={{ uri: "https://images.pexels.com/photos/3182812/pexels-photo-3182812.jpeg?auto=compress&cs=tinysrgb&w=600" }} 
-                style={styles.projectImage} 
-              />
-              <View style={styles.projectContent}>
-                <Text style={styles.projectTitle}>Mobile App Design</Text>
-                <View style={styles.projectProgress}>
-                  <View style={[styles.progressBar, { width: '75%' }]} />
-                </View>
-                <Text style={styles.projectStatus}>75% Complete</Text>
-              </View>
-            </View>
-
-            <View style={styles.projectCard}>
-              <Image 
-                source={{ uri: "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=600" }} 
-                style={styles.projectImage} 
-              />
-              <View style={styles.projectContent}>
-                <Text style={styles.projectTitle}>Website Redesign</Text>
-                <View style={styles.projectProgress}>
-                  <View style={[styles.progressBar, { width: '40%' }]} />
-                </View>
-                <Text style={styles.projectStatus}>40% Complete</Text>
-              </View>
-            </View>
-
-            <View style={styles.projectCard}>
-              <Image 
-                source={{ uri: "https://images.pexels.com/photos/3184339/pexels-photo-3184339.jpeg?auto=compress&cs=tinysrgb&w=600" }} 
-                style={styles.projectImage} 
-              />
-              <View style={styles.projectContent}>
-                <Text style={styles.projectTitle}>Brand Identity</Text>
-                <View style={styles.projectProgress}>
-                  <View style={[styles.progressBar, { width: '90%' }]} />
-                </View>
-                <Text style={styles.projectStatus}>90% Complete</Text>
-              </View>
-            </View>
-          </ScrollView>
+          <Text style={styles.caValue}>{stats.chiffreAffaires.toLocaleString('fr-FR')} €</Text>
         </View>
 
         {/* Quick Actions */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>Actions rapides</Text>
           <View style={styles.actionsContainer}>
             <TouchableOpacity style={styles.actionButton}>
               <View style={[styles.actionIconContainer, { backgroundColor: '#dbeafe' }]}>
                 <FileText size={20} color="#2563eb" />
               </View>
-              <Text style={styles.actionText}>New Project</Text>
+              <Text style={styles.actionText}>Nouveau devis</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.actionButton}>
               <View style={[styles.actionIconContainer, { backgroundColor: '#dcfce7' }]}>
                 <Users size={20} color="#16a34a" />
               </View>
-              <Text style={styles.actionText}>Add Client</Text>
+              <Text style={styles.actionText}>Ajouter client</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.actionButton}>
               <View style={[styles.actionIconContainer, { backgroundColor: '#fef3c7' }]}>
                 <Calendar size={20} color="#d97706" />
               </View>
-              <Text style={styles.actionText}>Schedule</Text>
+              <Text style={styles.actionText}>Rendez-vous</Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Recent Clients */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Clients récents</Text>
+            <TouchableOpacity style={styles.seeAllButton}>
+              <Text style={styles.seeAllText}>Voir tous</Text>
+              <ChevronRight size={16} color="#3b82f6" />
+            </TouchableOpacity>
+          </View>
+
+          {recentActivity.clients.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Aucun client pour le moment</Text>
+              <TouchableOpacity style={styles.emptyButton}>
+                <Plus size={16} color="#3b82f6" />
+                <Text style={styles.emptyButtonText}>Ajouter un client</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            recentActivity.clients.map((client, index) => (
+              <TouchableOpacity key={client.id} style={styles.clientItem}>
+                <View style={styles.clientAvatar}>
+                  <Text style={styles.clientAvatarText}>{client.nom.charAt(0)}</Text>
+                </View>
+                <View style={styles.clientInfo}>
+                  <Text style={styles.clientName}>{client.nom}</Text>
+                  <Text style={styles.clientDate}>Ajouté le {formatDate(client.created_at)}</Text>
+                </View>
+                <ChevronRight size={20} color="#9ca3af" />
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+
+        {/* Recent Documents */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Documents récents</Text>
+            <TouchableOpacity style={styles.seeAllButton}>
+              <Text style={styles.seeAllText}>Voir tous</Text>
+              <ChevronRight size={16} color="#3b82f6" />
+            </TouchableOpacity>
+          </View>
+
+          {recentActivity.devis.length === 0 && recentActivity.factures.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Aucun document pour le moment</Text>
+              <TouchableOpacity style={styles.emptyButton}>
+                <Plus size={16} color="#3b82f6" />
+                <Text style={styles.emptyButtonText}>Créer un document</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              {recentActivity.devis.map((devis, index) => (
+                <TouchableOpacity key={devis.id} style={styles.documentItem}>
+                  <View style={[styles.documentIcon, { backgroundColor: '#eff6ff' }]}>
+                    <FileText size={20} color="#2563eb" />
+                  </View>
+                  <View style={styles.documentInfo}>
+                    <Text style={styles.documentTitle}>{devis.numero}</Text>
+                    <Text style={styles.documentClient}>{devis.client?.nom || 'Client inconnu'}</Text>
+                    <Text style={styles.documentDate}>{formatDate(devis.created_at)}</Text>
+                  </View>
+                  <ChevronRight size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              ))}
+              
+              {recentActivity.factures.map((facture, index) => (
+                <TouchableOpacity key={facture.id} style={styles.documentItem}>
+                  <View style={[styles.documentIcon, { backgroundColor: '#f0fdf4' }]}>
+                    <CreditCard size={20} color="#16a34a" />
+                  </View>
+                  <View style={styles.documentInfo}>
+                    <Text style={styles.documentTitle}>{facture.numero}</Text>
+                    <Text style={styles.documentClient}>{facture.client?.nom || 'Client inconnu'}</Text>
+                    <Text style={styles.documentDate}>{formatDate(facture.created_at)}</Text>
+                  </View>
+                  <ChevronRight size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
+        </View>
+
+        {/* Tips Section */}
+        <View style={styles.tipsContainer}>
+          <Text style={styles.tipsTitle}>Astuce du jour</Text>
+          <Text style={styles.tipsText}>
+            Utilisez le calculateur de charges pour estimer vos revenus nets et mieux planifier votre activité.
+          </Text>
         </View>
       </ScrollView>
     </View>
@@ -206,16 +252,9 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     backgroundColor: '#ffffff',
   },
-  greeting: {
-    fontSize: 14,
-    color: '#64748b',
-    fontFamily: 'Inter-Regular',
-  },
-  username: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    fontFamily: 'Inter-Bold',
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   notificationButton: {
     width: 44,
@@ -276,8 +315,43 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontFamily: 'Inter-Regular',
   },
+  caContainer: {
+    backgroundColor: '#ffffff',
+    margin: 20,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  caHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  caTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+    fontFamily: 'Inter-SemiBold',
+  },
+  caSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
+  },
+  caValue: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#16a34a',
+    fontFamily: 'Inter-Bold',
+  },
   sectionContainer: {
-    marginTop: 24,
+    marginTop: 8,
+    marginBottom: 16,
     paddingHorizontal: 20,
   },
   sectionHeader: {
@@ -302,114 +376,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     marginRight: 4,
   },
-  eventCard: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  eventDateContainer: {
-    width: 50,
-    height: 60,
-    backgroundColor: '#eff6ff',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  eventMonth: {
-    fontSize: 12,
-    color: '#3b82f6',
-    fontFamily: 'Inter-Medium',
-  },
-  eventDay: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#3b82f6',
-    fontFamily: 'Inter-Bold',
-  },
-  eventDetails: {
-    flex: 1,
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0f172a',
-    fontFamily: 'Inter-SemiBold',
-    marginBottom: 4,
-  },
-  eventDescription: {
-    fontSize: 14,
-    color: '#64748b',
-    fontFamily: 'Inter-Regular',
-    marginBottom: 8,
-  },
-  eventTimeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  eventTime: {
-    fontSize: 12,
-    color: '#64748b',
-    fontFamily: 'Inter-Regular',
-    marginLeft: 6,
-  },
-  projectsScrollView: {
-    marginBottom: 8,
-  },
-  projectCard: {
-    width: 200,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    marginRight: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  projectImage: {
-    width: '100%',
-    height: 120,
-  },
-  projectContent: {
-    padding: 16,
-  },
-  projectTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0f172a',
-    fontFamily: 'Inter-SemiBold',
-    marginBottom: 12,
-  },
-  projectProgress: {
-    height: 6,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 3,
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#3b82f6',
-    borderRadius: 3,
-  },
-  projectStatus: {
-    fontSize: 12,
-    color: '#64748b',
-    fontFamily: 'Inter-Regular',
-  },
   actionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 12,
-    marginBottom: 30,
+    marginBottom: 20,
   },
   actionButton: {
     backgroundColor: '#ffffff',
@@ -436,5 +407,144 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     fontFamily: 'Inter-Medium',
     textAlign: 'center',
+  },
+  clientItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  clientAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  clientAvatarText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    fontFamily: 'Inter-Bold',
+  },
+  clientInfo: {
+    flex: 1,
+  },
+  clientName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#0f172a',
+    fontFamily: 'Inter-Medium',
+    marginBottom: 4,
+  },
+  clientDate: {
+    fontSize: 12,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
+  },
+  documentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  documentIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  documentInfo: {
+    flex: 1,
+  },
+  documentTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#0f172a',
+    fontFamily: 'Inter-Medium',
+  },
+  documentClient: {
+    fontSize: 14,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
+  },
+  documentDate: {
+    fontSize: 12,
+    color: '#9ca3af',
+    fontFamily: 'Inter-Regular',
+    marginTop: 2,
+  },
+  emptyState: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontFamily: 'Inter-Regular',
+    marginBottom: 12,
+  },
+  emptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  emptyButtonText: {
+    fontSize: 14,
+    color: '#3b82f6',
+    fontFamily: 'Inter-Medium',
+    marginLeft: 8,
+  },
+  tipsContainer: {
+    backgroundColor: '#eff6ff',
+    margin: 20,
+    marginTop: 8,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    marginBottom: 30,
+  },
+  tipsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e40af',
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 8,
+  },
+  tipsText: {
+    fontSize: 14,
+    color: '#1e40af',
+    fontFamily: 'Inter-Regular',
+    lineHeight: 20,
   },
 });
