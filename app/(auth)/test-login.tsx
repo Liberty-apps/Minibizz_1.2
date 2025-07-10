@@ -15,16 +15,48 @@ export default function TestLogin() {
       await login(TEST_ACCOUNT.email, TEST_ACCOUNT.password);
       router.replace('/(tabs)');
     } catch (error: any) {
-      // Si le compte n'existe pas, proposer de le créer
-      if (error.message.includes('Email ou mot de passe incorrect')) {
+      // Si le compte n'existe pas, tenter de le créer automatiquement
+      if (error.message.includes('Email ou mot de passe incorrect') || 
+          error.message.includes('Invalid login credentials')) {
         Alert.alert(
           'Compte de test non trouvé',
-          'Le compte de test n\'existe pas encore. Voulez-vous le créer ?',
+          'Le compte de test n\'existe pas encore. Voulez-vous le créer automatiquement ?',
           [
             { text: 'Annuler', style: 'cancel' },
             {
-              text: 'Créer le compte',
-              onPress: () => router.push('/(auth)/register')
+              text: 'Créer et se connecter',
+              onPress: async () => {
+                try {
+                  setLoading(true);
+                  const result = await createTestAccount();
+                  
+                  if (result.success) {
+                    // Attendre un peu pour que le compte soit bien créé
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Tenter la connexion à nouveau
+                    await login(TEST_ACCOUNT.email, TEST_ACCOUNT.password);
+                    router.replace('/(tabs)');
+                    
+                    Alert.alert(
+                      'Succès',
+                      'Compte de test créé et connexion réussie !'
+                    );
+                  } else {
+                    Alert.alert(
+                      'Erreur',
+                      `Impossible de créer le compte de test: ${result.message}`
+                    );
+                  }
+                } catch (createError: any) {
+                  Alert.alert(
+                    'Erreur',
+                    `Erreur lors de la création du compte: ${createError.message}`
+                  );
+                } finally {
+                  setLoading(false);
+                }
+              }
             }
           ]
         );
