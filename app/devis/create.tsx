@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ChevronLeft, Save, Plus, Trash2, User, Calendar, Clock, FileText, CreditCard as Edit3 } from 'lucide-react-native';
+import { ChevronLeft, Save, Plus, Trash2, User, Calendar, Clock, FileText } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { devisService, clientsService } from '../../src/services/database';
 import { supabase } from '../../src/lib/supabase';
@@ -216,6 +216,15 @@ export default function CreateDevis() {
 
   const totals = calculateTotals();
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={styles.loadingText}>Chargement...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -283,7 +292,7 @@ export default function CreateDevis() {
               
               <TouchableOpacity 
                 style={styles.addClientButton}
-                onPress={() => router.push('/clients/create?returnTo=devis/create')}
+                onPress={() => Alert.alert('Ajouter un client', 'Fonctionnalité en cours de développement')}
               >
                 <Plus size={20} color="#2563eb" />
                 <Text style={styles.addClientText}>Ajouter un client</Text>
@@ -507,6 +516,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f9fafb',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 12,
+    fontFamily: 'Inter-Regular',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -530,6 +551,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter-SemiBold',
   },
   saveButton: {
     width: 40,
@@ -559,6 +581,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     marginBottom: 16,
+    fontFamily: 'Inter-SemiBold',
   },
   formGroup: {
     marginBottom: 16,
@@ -572,6 +595,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#374151',
     marginBottom: 6,
+    fontFamily: 'Inter-Medium',
   },
   input: {
     borderWidth: 1,
@@ -582,6 +606,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
     backgroundColor: '#ffffff',
+    fontFamily: 'Inter-Regular',
   },
   textArea: {
     height: 100,
@@ -595,6 +620,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontStyle: 'italic',
     marginBottom: 12,
+    fontFamily: 'Inter-Regular',
   },
   clientOption: {
     flexDirection: 'row',
@@ -622,6 +648,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#ffffff',
+    fontFamily: 'Inter-Bold',
   },
   clientInfo: {
     flex: 1,
@@ -630,10 +657,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#111827',
+    fontFamily: 'Inter-Medium',
   },
   clientEmail: {
     fontSize: 14,
     color: '#6b7280',
+    fontFamily: 'Inter-Regular',
   },
   clientSelected: {
     width: 24,
@@ -647,6 +676,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#ffffff',
+    fontFamily: 'Inter-Bold',
   },
   addClientButton: {
     flexDirection: 'row',
@@ -664,6 +694,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#2563eb',
     marginLeft: 8,
+    fontFamily: 'Inter-Medium',
   },
   dateInput: {
     flexDirection: 'row',
@@ -679,6 +710,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
     marginLeft: 8,
+    fontFamily: 'Inter-Regular',
   },
   statusContainer: {
     flexDirection: 'row',
@@ -700,10 +732,12 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     color: '#6b7280',
+    fontFamily: 'Inter-Regular',
   },
   statusTextSelected: {
     color: '#2563eb',
     fontWeight: '500',
+    fontFamily: 'Inter-Medium',
   },
   lineItem: {
     borderWidth: 1,
@@ -722,6 +756,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#111827',
+    fontFamily: 'Inter-Medium',
   },
   removeLineButton: {
     width: 32,
@@ -742,11 +777,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#6b7280',
     marginRight: 8,
+    fontFamily: 'Inter-Medium',
   },
   lineTotalValue: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter-SemiBold',
   },
   addLineButton: {
     flexDirection: 'row',
@@ -764,6 +801,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#2563eb',
     marginLeft: 8,
+    fontFamily: 'Inter-Medium',
   },
   totalsSection: {
     backgroundColor: '#ffffff',
@@ -797,21 +835,25 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 16,
     color: '#6b7280',
+    fontFamily: 'Inter-Regular',
   },
   totalValue: {
     fontSize: 16,
     fontWeight: '500',
     color: '#111827',
+    fontFamily: 'Inter-Medium',
   },
   totalLabelFinal: {
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter-SemiBold',
   },
   totalValueFinal: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#2563eb',
+    fontFamily: 'Inter-Bold',
   },
   footer: {
     padding: 16,
@@ -832,5 +874,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+    fontFamily: 'Inter-SemiBold',
   },
 });

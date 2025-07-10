@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
-import { FileText, Plus, Search, Filter, Eye, CreditCard as Edit3, Download, Send, Calendar, Euro, Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle } from 'lucide-react-native';
+import { FileText, Plus, Search, Filter, Eye, Edit3, Download, Send, Calendar, Euro, Clock, CheckCircle, AlertCircle } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { devisService, facturesService } from '../../src/services/database';
 
@@ -17,9 +17,6 @@ export default function Devis() {
   useEffect(() => {
     if (user) {
       loadData();
-    } else {
-      // Rediriger vers la connexion si pas d'utilisateur
-      router.replace('/(auth)/login');
     }
   }, [user]);
 
@@ -52,25 +49,11 @@ export default function Devis() {
     item.numero.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCreateNew = async () => {
-    if (!user) {
-      Alert.alert('Erreur', 'Vous devez être connecté pour créer un document');
-      router.replace('/(auth)/login');
-      return;
-    }
-
-    try {
-      if (activeTab === 'devis') {
-        const numero = await devisService.generateNumero(user.id);
-        // Pour l'instant, on affiche juste une alerte
-        Alert.alert('Création de devis', `Nouveau devis ${numero} - Fonctionnalité en cours de développement`);
-      } else {
-        const numero = await facturesService.generateNumero(user.id);
-        // Pour l'instant, on affiche juste une alerte
-        Alert.alert('Création de facture', `Nouvelle facture ${numero} - Fonctionnalité en cours de développement`);
-      }
-    } catch (error) {
-      Alert.alert('Erreur', 'Impossible de créer le document');
+  const handleCreateNew = () => {
+    if (activeTab === 'devis') {
+      router.push('/devis/create');
+    } else {
+      router.push('/factures/create');
     }
   };
 
@@ -124,29 +107,35 @@ export default function Devis() {
     }
   };
 
-  // Vérifier l'authentification
-  if (!user) {
-    return (
-      <View style={styles.authContainer}>
-        <FileText size={64} color="#d1d5db" />
-        <Text style={styles.authTitle}>Connexion requise</Text>
-        <Text style={styles.authText}>
-          Vous devez être connecté pour accéder à vos documents
-        </Text>
-        <TouchableOpacity 
-          style={styles.authButton}
-          onPress={() => router.replace('/(auth)/login')}
-        >
-          <Text style={styles.authButtonText}>Se connecter</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const getStatusText = (statut: string) => {
+    switch (statut) {
+      case 'brouillon':
+        return 'Brouillon';
+      case 'envoye':
+        return 'Envoyé';
+      case 'envoyee':
+        return 'Envoyée';
+      case 'accepte':
+        return 'Accepté';
+      case 'refuse':
+        return 'Refusé';
+      case 'expire':
+        return 'Expiré';
+      case 'payee':
+        return 'Payée';
+      case 'en_retard':
+        return 'En retard';
+      case 'annulee':
+        return 'Annulée';
+      default:
+        return statut;
+    }
+  };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <FileText size={48} color="#2563eb" />
+        <ActivityIndicator size="large" color="#2563eb" />
         <Text style={styles.loadingText}>Chargement des documents...</Text>
       </View>
     );
@@ -244,6 +233,7 @@ export default function Devis() {
           filteredList.map((item) => {
             const StatusIcon = getStatusIcon(item.statut);
             const statusColor = getStatusColor(item.statut);
+            const statusText = getStatusText(item.statut);
             
             return (
               <TouchableOpacity 
@@ -264,7 +254,7 @@ export default function Devis() {
                     </Text>
                     <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
                       <StatusIcon size={12} color="#ffffff" />
-                      <Text style={styles.statusText}>{item.statut}</Text>
+                      <Text style={styles.statusText}>{statusText}</Text>
                     </View>
                   </View>
                 </View>
@@ -378,37 +368,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f9fafb',
   },
-  authContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    padding: 24,
-  },
-  authTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  authText: {
-    fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  authButton: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  authButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -419,6 +378,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     marginTop: 12,
+    fontFamily: 'Inter-Regular',
   },
   header: {
     flexDirection: 'row',
@@ -432,11 +392,13 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#111827',
+    fontFamily: 'Inter-Bold',
   },
   subtitle: {
     fontSize: 16,
     color: '#6b7280',
     marginTop: 4,
+    fontFamily: 'Inter-Regular',
   },
   addButton: {
     backgroundColor: '#2563eb',
@@ -461,6 +423,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#dc2626',
     marginLeft: 8,
+    fontFamily: 'Inter-Regular',
   },
   retryButton: {
     backgroundColor: '#dc2626',
@@ -472,6 +435,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#ffffff',
     fontWeight: '500',
+    fontFamily: 'Inter-Medium',
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -494,6 +458,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#6b7280',
+    fontFamily: 'Inter-Medium',
   },
   activeTabText: {
     color: '#2563eb',
@@ -517,6 +482,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#111827',
+    fontFamily: 'Inter-Regular',
   },
   clearSearch: {
     fontSize: 16,
@@ -545,6 +511,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     marginTop: 16,
+    fontFamily: 'Inter-SemiBold',
   },
   emptyText: {
     fontSize: 16,
@@ -552,6 +519,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 32,
+    fontFamily: 'Inter-Regular',
   },
   createFirstButton: {
     backgroundColor: '#2563eb',
@@ -564,6 +532,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+    fontFamily: 'Inter-SemiBold',
   },
   listItem: {
     backgroundColor: '#ffffff',
@@ -589,11 +558,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter-SemiBold',
   },
   itemClient: {
     fontSize: 14,
     color: '#6b7280',
     marginTop: 2,
+    fontFamily: 'Inter-Regular',
   },
   itemRight: {
     alignItems: 'flex-end',
@@ -603,6 +574,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
     marginBottom: 4,
+    fontFamily: 'Inter-Bold',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -616,6 +588,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#ffffff',
+    fontFamily: 'Inter-Medium',
   },
   itemDetails: {
     marginBottom: 12,
@@ -629,6 +602,7 @@ const styles = StyleSheet.create({
   itemDate: {
     fontSize: 12,
     color: '#6b7280',
+    fontFamily: 'Inter-Regular',
   },
   itemActions: {
     flexDirection: 'row',
@@ -659,10 +633,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#111827',
+    fontFamily: 'Inter-Bold',
   },
   statLabel: {
     fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
+    fontFamily: 'Inter-Regular',
   },
 });

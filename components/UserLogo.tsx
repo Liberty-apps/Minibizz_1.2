@@ -75,6 +75,7 @@ const styles = StyleSheet.create({
   initialsText: {
     color: '#ffffff',
     fontWeight: 'bold',
+    fontFamily: 'Inter-Bold',
   },
   logoImage: {
     borderRadius: 16,
@@ -82,9 +83,11 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 16,
     color: '#6b7280',
+    fontFamily: 'Inter-Regular',
   },
   userName: {
     fontWeight: '500',
     color: '#374151',
+    fontFamily: 'Inter-Medium',
   },
 });

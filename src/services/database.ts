@@ -342,123 +342,94 @@ export const planningService = {
   }
 };
 
-// Services pour les missions
-export const missionsService = {
-  async getAll(): Promise<Mission[]> {
-    const { data, error } = await supabase
-      .from('missions')
-      .select('*')
-      .eq('statut', 'ouverte')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  async getMyMissions(userId: string): Promise<Mission[]> {
-    const { data, error } = await supabase
-      .from('missions')
-      .select('*')
-      .eq('createur_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  async create(mission: Tables['missions']['Insert']): Promise<Mission> {
-    const { data, error } = await supabase
-      .from('missions')
-      .insert(mission)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  },
-
-  async update(id: string, updates: Tables['missions']['Update']): Promise<Mission> {
-    const { data, error } = await supabase
-      .from('missions')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  }
-};
-
 // Services pour les statistiques du dashboard
 export const dashboardService = {
   async getStats(userId: string) {
-    const [clientsCount, devisCount, facturesCount, caThisMois] = await Promise.all([
-      // Nombre de clients
-      supabase
-        .from('clients')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId),
-      
-      // Nombre de devis
-      supabase
-        .from('devis')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId),
-      
-      // Nombre de factures
-      supabase
-        .from('factures')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId),
-      
-      // CA du mois en cours
-      supabase
-        .from('factures')
-        .select('montant_ttc')
-        .eq('user_id', userId)
-        .eq('statut', 'payee')
-        .gte('date_paiement', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
-    ]);
+    try {
+      const [clientsCount, devisCount, facturesCount, caThisMois] = await Promise.all([
+        // Nombre de clients
+        supabase
+          .from('clients')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId),
+        
+        // Nombre de devis
+        supabase
+          .from('devis')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId),
+        
+        // Nombre de factures
+        supabase
+          .from('factures')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId),
+        
+        // CA du mois en cours
+        supabase
+          .from('factures')
+          .select('montant_ttc')
+          .eq('user_id', userId)
+          .eq('statut', 'payee')
+          .gte('date_paiement', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+      ]);
 
-    const caTotal = caThisMois.data?.reduce((sum, facture) => sum + (facture.montant_ttc || 0), 0) || 0;
+      const caTotal = caThisMois.data?.reduce((sum, facture) => sum + (facture.montant_ttc || 0), 0) || 0;
 
-    return {
-      clients: clientsCount.count || 0,
-      devis: devisCount.count || 0,
-      factures: facturesCount.count || 0,
-      chiffreAffaires: caTotal
-    };
+      return {
+        clients: clientsCount.count || 0,
+        devis: devisCount.count || 0,
+        factures: facturesCount.count || 0,
+        chiffreAffaires: caTotal
+      };
+    } catch (error) {
+      console.error('Erreur lors du chargement des statistiques:', error);
+      return {
+        clients: 0,
+        devis: 0,
+        factures: 0,
+        chiffreAffaires: 0
+      };
+    }
   },
 
   async getRecentActivity(userId: string) {
-    const [recentDevis, recentFactures, recentClients] = await Promise.all([
-      supabase
-        .from('devis')
-        .select('id, numero, created_at, client:clients(nom)')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(3),
-      
-      supabase
-        .from('factures')
-        .select('id, numero, created_at, client:clients(nom)')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(3),
-      
-      supabase
-        .from('clients')
-        .select('id, nom, created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(3)
-    ]);
+    try {
+      const [recentDevis, recentFactures, recentClients] = await Promise.all([
+        supabase
+          .from('devis')
+          .select('id, numero, created_at, client:clients(nom)')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(3),
+        
+        supabase
+          .from('factures')
+          .select('id, numero, created_at, client:clients(nom)')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(3),
+        
+        supabase
+          .from('clients')
+          .select('id, nom, created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(3)
+      ]);
 
-    return {
-      devis: recentDevis.data || [],
-      factures: recentFactures.data || [],
-      clients: recentClients.data || []
-    };
+      return {
+        devis: recentDevis.data || [],
+        factures: recentFactures.data || [],
+        clients: recentClients.data || []
+      };
+    } catch (error) {
+      console.error('Erreur lors du chargement des activités récentes:', error);
+      return {
+        devis: [],
+        factures: [],
+        clients: []
+      };
+    }
   }
 };

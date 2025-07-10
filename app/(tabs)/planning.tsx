@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
-import { router } from 'expo-router';
-import { Calendar, Plus, Clock, User, MapPin, ChevronLeft, ChevronRight, Filter, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Circle as XCircle, Phone, Video, Users as UsersIcon } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { Calendar, Plus, Clock, User, MapPin, ChevronLeft, ChevronRight, Filter, CheckCircle, AlertCircle, XCircle, Phone, Video, UsersIcon } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { planningService } from '../../src/services/database';
-import { supabase } from '../../src/lib/supabase';
 
 export default function Planning() {
   const { user } = useAuth();
@@ -127,93 +125,8 @@ export default function Planning() {
     setShowAddEvent(true);
   };
 
-  const handleSaveEvent = async () => {
-    if (!user) {
-      Alert.alert('Erreur', 'Vous devez être connecté pour créer un événement');
-      return;
-    }
-    
-    if (!newEvent.titre.trim()) {
-      Alert.alert('Erreur', 'Le titre est obligatoire');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      
-      // Créer l'événement
-      const { data, error } = await supabase
-        .from('planning')
-        .insert({
-          user_id: user.id,
-          titre: newEvent.titre,
-          description: newEvent.description,
-          date_debut: newEvent.date_debut,
-          date_fin: newEvent.date_fin,
-          lieu: newEvent.lieu,
-          type_evenement: newEvent.type_evenement,
-          statut: newEvent.statut
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      // Réinitialiser le formulaire
-      setNewEvent({
-        titre: '',
-        description: '',
-        date_debut: new Date().toISOString(),
-        date_fin: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-        lieu: '',
-        type_evenement: 'rdv',
-        statut: 'planifie'
-      });
-      
-      // Fermer le modal
-      setShowAddEvent(false);
-      
-      // Recharger les événements
-      loadEvents();
-      
-      Alert.alert('Succès', 'Événement créé avec succès');
-    } catch (error: any) {
-      console.error('Erreur lors de la création de l\'événement:', error);
-      Alert.alert('Erreur', 'Impossible de créer l\'événement: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleEventPress = (eventId: string) => {
-    router.push(`/planning/${eventId}`);
-  };
-
-  const handleEditEvent = (eventId: string) => {
-    router.push(`/planning/${eventId}/edit`);
-  };
-
-  const handleDeleteEvent = (eventId: string, eventTitle: string) => {
-    Alert.alert(
-      'Confirmer la suppression',
-      `Êtes-vous sûr de vouloir supprimer l'événement "${eventTitle}" ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await planningService.delete(eventId);
-              Alert.alert('Succès', 'Événement supprimé avec succès');
-              loadEvents();
-            } catch (error) {
-              Alert.alert('Erreur', 'Impossible de supprimer l\'événement');
-            }
-          }
-        }
-      ]
-    );
+    Alert.alert('Voir l\'événement', `Détails de l'événement ${eventId}`);
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -228,10 +141,10 @@ export default function Planning() {
 
   const filteredEvents = getFilteredEvents();
 
-  if (loading && !showAddEvent) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Calendar size={48} color="#2563eb" />
+        <ActivityIndicator size="large" color="#2563eb" />
         <Text style={styles.loadingText}>Chargement du planning...</Text>
       </View>
     );
@@ -324,119 +237,6 @@ export default function Planning() {
           </Text>
         </TouchableOpacity>
       </View>
-
-      {/* Add Event Modal */}
-      {showAddEvent && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Nouvel événement</Text>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Titre *</Text>
-              <TextInput
-                style={styles.input}
-                value={newEvent.titre}
-                onChangeText={(text) => setNewEvent({...newEvent, titre: text})}
-                placeholder="Titre de l'événement"
-              />
-            </View>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Description</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={newEvent.description}
-                onChangeText={(text) => setNewEvent({...newEvent, description: text})}
-                placeholder="Description de l'événement"
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-            
-            <View style={styles.formRow}>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Date</Text>
-                <TouchableOpacity style={styles.dateInput}>
-                  <Calendar size={16} color="#6b7280" />
-                  <Text style={styles.dateText}>
-                    {new Date(newEvent.date_debut).toLocaleDateString('fr-FR')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              
-              <View style={[styles.formGroup, { flex: 1, marginLeft: 12 }]}>
-                <Text style={styles.label}>Heure</Text>
-                <TouchableOpacity style={styles.dateInput}>
-                  <Clock size={16} color="#6b7280" />
-                  <Text style={styles.dateText}>
-                    {new Date(newEvent.date_debut).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Lieu</Text>
-              <TextInput
-                style={styles.input}
-                value={newEvent.lieu}
-                onChangeText={(text) => setNewEvent({...newEvent, lieu: text})}
-                placeholder="Lieu de l'événement"
-              />
-            </View>
-            
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Type d'événement</Text>
-              <View style={styles.typeContainer}>
-                <TouchableOpacity 
-                  style={[
-                    styles.typeOption,
-                    newEvent.type_evenement === 'rdv' && styles.typeOptionSelected
-                  ]}
-                  onPress={() => setNewEvent({...newEvent, type_evenement: 'rdv'})}
-                >
-                  <Text style={[
-                    styles.typeText,
-                    newEvent.type_evenement === 'rdv' && styles.typeTextSelected
-                  ]}>
-                    Rendez-vous
-                  </Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[
-                    styles.typeOption,
-                    newEvent.type_evenement === 'prestation' && styles.typeOptionSelected
-                  ]}
-                  onPress={() => setNewEvent({...newEvent, type_evenement: 'prestation'})}
-                >
-                  <Text style={[
-                    styles.typeText,
-                    newEvent.type_evenement === 'prestation' && styles.typeTextSelected
-                  ]}>
-                    Prestation
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={() => setShowAddEvent(false)}
-              >
-                <Text style={styles.cancelText}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.saveButton}
-                onPress={handleSaveEvent}
-              >
-                <Text style={styles.saveText}>Enregistrer</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
 
       {/* Events List */}
       <ScrollView style={styles.eventsContainer} showsVerticalScrollIndicator={false}>
@@ -575,6 +375,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     marginTop: 12,
+    fontFamily: 'Inter-Regular',
   },
   header: {
     flexDirection: 'row',
@@ -588,11 +389,13 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#111827',
+    fontFamily: 'Inter-Bold',
   },
   subtitle: {
     fontSize: 16,
     color: '#6b7280',
     marginTop: 4,
+    fontFamily: 'Inter-Regular',
   },
   addButton: {
     backgroundColor: '#2563eb',
@@ -617,6 +420,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#dc2626',
     marginLeft: 8,
+    fontFamily: 'Inter-Regular',
   },
   retryButton: {
     backgroundColor: '#dc2626',
@@ -628,6 +432,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#ffffff',
     fontWeight: '500',
+    fontFamily: 'Inter-Medium',
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -652,6 +457,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     textTransform: 'capitalize',
+    fontFamily: 'Inter-SemiBold',
   },
   weekDaysContainer: {
     flexDirection: 'row',
@@ -666,6 +472,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#6b7280',
+    fontFamily: 'Inter-Medium',
   },
   filterContainer: {
     flexDirection: 'row',
@@ -693,6 +500,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#6b7280',
+    fontFamily: 'Inter-Medium',
   },
   activeFilterText: {
     color: '#111827',
@@ -711,6 +519,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     marginTop: 16,
+    fontFamily: 'Inter-SemiBold',
   },
   emptyText: {
     fontSize: 16,
@@ -718,6 +527,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 32,
+    fontFamily: 'Inter-Regular',
   },
   createFirstButton: {
     backgroundColor: '#2563eb',
@@ -730,6 +540,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+    fontFamily: 'Inter-SemiBold',
   },
   eventCard: {
     flexDirection: 'row',
@@ -768,6 +579,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     flex: 1,
+    fontFamily: 'Inter-SemiBold',
   },
   eventStatus: {
     flexDirection: 'row',
@@ -777,6 +589,7 @@ const styles = StyleSheet.create({
   eventTime: {
     fontSize: 14,
     fontWeight: '500',
+    fontFamily: 'Inter-Medium',
   },
   eventDetails: {
     gap: 4,
@@ -789,12 +602,14 @@ const styles = StyleSheet.create({
   eventDetailText: {
     fontSize: 14,
     color: '#6b7280',
+    fontFamily: 'Inter-Regular',
   },
   eventDescription: {
     fontSize: 14,
     color: '#6b7280',
     fontStyle: 'italic',
     marginTop: 4,
+    fontFamily: 'Inter-Regular',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -812,128 +627,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#111827',
+    fontFamily: 'Inter-Bold',
   },
   statLabel: {
     fontSize: 12,
     color: '#6b7280',
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    margin: 16,
-    width: '90%',
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 20,
-  },
-  formGroup: {
-    marginBottom: 16,
-  },
-  formRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: '#111827',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  dateInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#ffffff',
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#111827',
-    marginLeft: 8,
-  },
-  typeContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  typeOption: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-  },
-  typeOptionSelected: {
-    borderColor: '#2563eb',
-    backgroundColor: '#eff6ff',
-  },
-  typeText: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  typeTextSelected: {
-    color: '#2563eb',
-    fontWeight: '500',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-    marginTop: 20,
-  },
-  cancelButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#f3f4f6',
-  },
-  cancelText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#6b7280',
-  },
-  saveButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#2563eb',
-  },
-  saveText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#ffffff',
+    fontFamily: 'Inter-Regular',
   },
 });

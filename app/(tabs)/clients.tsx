@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
-import { Users, Plus, Search, Mail, Phone, MapPin, Building, User, Filter, CircleAlert as AlertCircle, CreditCard as Edit3, Trash2 } from 'lucide-react-native';
+import { Users, Plus, Search, Mail, Phone, MapPin, Building, User, Filter, AlertCircle, Edit3, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { clientsService } from '../../src/services/database';
 
@@ -46,15 +46,15 @@ export default function Clients() {
   });
 
   const handleAddClient = () => {
-    router.push('/clients/create');
+    Alert.alert('Ajouter un client', 'Fonctionnalité en cours de développement');
   };
 
   const handleClientPress = (clientId: string) => {
-    router.push(`/clients/${clientId}`);
+    Alert.alert('Voir le client', `Détails du client ${clientId}`);
   };
 
   const handleEditClient = (clientId: string) => {
-    router.push(`/clients/${clientId}/edit`);
+    Alert.alert('Modifier le client', `Modification du client ${clientId}`);
   };
 
   const handleDeleteClient = (clientId: string, clientName: string) => {
@@ -103,7 +103,7 @@ export default function Clients() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Users size={48} color="#2563eb" />
+        <ActivityIndicator size="large" color="#2563eb" />
         <Text style={styles.loadingText}>Chargement des clients...</Text>
       </View>
     );
@@ -338,11 +338,13 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#111827',
+    fontFamily: 'Inter-Bold',
   },
   subtitle: {
     fontSize: 16,
     color: '#6b7280',
     marginTop: 4,
+    fontFamily: 'Inter-Regular',
   },
   addButton: {
     backgroundColor: '#2563eb',
@@ -367,6 +369,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#dc2626',
     marginLeft: 8,
+    fontFamily: 'Inter-Regular',
   },
   retryButton: {
     backgroundColor: '#dc2626',
@@ -378,6 +381,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#ffffff',
     fontWeight: '500',
+    fontFamily: 'Inter-Medium',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -398,6 +402,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#111827',
+    fontFamily: 'Inter-Regular',
   },
   clearSearch: {
     fontSize: 16,
@@ -438,6 +443,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#6b7280',
+    fontFamily: 'Inter-Medium',
   },
   activeFilterTabText: {
     color: '#111827',
@@ -456,6 +462,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     marginTop: 16,
+    fontFamily: 'Inter-SemiBold',
   },
   emptyText: {
     fontSize: 16,
@@ -463,6 +470,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 32,
+    fontFamily: 'Inter-Regular',
   },
   createFirstButton: {
     backgroundColor: '#2563eb',
@@ -475,6 +483,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+    fontFamily: 'Inter-SemiBold',
   },
   clientCard: {
     backgroundColor: '#ffffff',
@@ -507,6 +516,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#ffffff',
+    fontFamily: 'Inter-Bold',
   },
   typeIndicator: {
     position: 'absolute',
@@ -526,6 +536,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     marginBottom: 8,
+    fontFamily: 'Inter-SemiBold',
   },
   contactInfo: {
     flexDirection: 'row',
@@ -537,6 +548,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     flex: 1,
+    fontFamily: 'Inter-Regular',
   },
   clientActions: {
     flexDirection: 'row',
@@ -566,10 +578,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#111827',
+    fontFamily: 'Inter-Bold',
   },
   statLabel: {
     fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
+    fontFamily: 'Inter-Regular',
   },
 });

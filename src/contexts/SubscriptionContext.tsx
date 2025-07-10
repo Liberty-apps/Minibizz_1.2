@@ -1,11 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { stripeService, type SubscriptionData } from '../services/stripe';
-import { stripeConfig } from '../stripe-config';
-import { subscriptionService } from '../services/subscription';
 
 interface SubscriptionContextType {
-  subscription: SubscriptionData | null;
+  subscription: any | null;
   hasAccess: (feature: string) => boolean;
   isLoading: boolean;
   refreshSubscription: () => Promise<void>;
@@ -17,7 +14,7 @@ const SubscriptionContext = createContext<SubscriptionContextType | undefined>(u
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [subscription, setSubscription] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -30,82 +27,28 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [user]);
 
   const loadSubscription = async () => {
-    if (!user) return;
-    
-    try {
-      setIsLoading(true);
-      const subscriptionData = await stripeService.getUserSubscription();
-      console.log("Loaded subscription data:", subscriptionData);
-      setSubscription(subscriptionData);
-    } catch (error) {
-      console.error('Erreur lors du chargement de l\'abonnement:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    // Simuler le chargement d'un abonnement
+    setIsLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setSubscription(null); // Pour l'instant, pas d'abonnement
+    setIsLoading(false);
   };
 
   const updatePlan = async (planName: string): Promise<void> => {
-    if (!user) throw new Error('Utilisateur non connecté');
-    
-    try {
-      setIsLoading(true);
-      await subscriptionService.updateUserPlan(user.id, planName);
-      await loadSubscription();
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du plan:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+    // Simuler la mise à jour d'un plan
+    setIsLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsLoading(false);
   };
 
   const getCurrentPlan = (): string => {
-    if (!subscription || !stripeService.isSubscriptionActive(subscription.subscription_status)) {
-      return 'Freemium';
-    }
-
-    const currentProduct = stripeConfig.products.find(p => p.priceId === subscription.price_id);
-    return currentProduct?.name || 'Premium Standard';
+    // Pour l'instant, retourner Freemium
+    return 'Freemium';
   };
 
   const hasAccess = (feature: string): boolean => {
-    if (!user) return false;
-    
-    // For debugging
-    console.log(`Checking access for feature: ${feature}`);
-    console.log(`Current plan: ${getCurrentPlan()}`);
-    
-    // If no active subscription, user has freemium access
-    if (!subscription || !stripeService.isSubscriptionActive(subscription.subscription_status)) {
-      return checkFreemiumAccess(feature);
-    }
-
-    // Find the current product
-    const currentProduct = stripeConfig.products.find(p => p.priceId === subscription.price_id);
-    if (!currentProduct) return checkFreemiumAccess(feature);
-
-    // For debugging
-    console.log(`Current product: ${currentProduct.name}`);
-    
-    return checkPremiumAccess(currentProduct.name, feature);
-  };
-
-  const checkFreemiumAccess = (feature: string): boolean => {
-    const freemiumFeatures = [
-      'dashboard',
-      'clients_basic',
-      'devis_basic',
-      'planning_basic',
-      'calculs',
-      'aide',
-      'premium'
-    ];
-    return freemiumFeatures.includes(feature);
-  };
-
-  const checkPremiumAccess = (planName: string, feature: string): boolean => {
-    // All premium plans have access to basic features
-    const basicPremiumFeatures = [
+    // Pour l'instant, accès à toutes les fonctionnalités de base
+    const basicFeatures = [
       'dashboard',
       'clients',
       'devis',
@@ -113,41 +56,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       'planning',
       'calculs',
       'parametres',
-      'aide',
-      'premium'
+      'aide'
     ];
-
-    if (basicPremiumFeatures.includes(feature)) {
-      return true;
-    }
-
-    // Plan-specific features
-    if (planName.includes('Pack Pro')) {
-      const packProFeatures = [
-        'missions',
-        'actualites',
-        'analytics',
-        'assistance_juridique',
-        'assistance_marketing'
-      ];
-      return packProFeatures.includes(feature);
-    }
-
-    if (planName.includes('Site Vitrine')) {
-      const siteVitrineFeatures = [
-        'sites-vitrines',
-        'domaine-personnalise'
-      ];
-      
-      // For debugging
-      console.log(`Checking if ${feature} is in Site Vitrine features`);
-      console.log(`Site Vitrine features: ${siteVitrineFeatures}`);
-      console.log(`Result: ${siteVitrineFeatures.includes(feature)}`);
-      
-      return siteVitrineFeatures.includes(feature);
-    }
-
-    return false;
+    
+    return basicFeatures.includes(feature);
   };
 
   const refreshSubscription = async () => {
