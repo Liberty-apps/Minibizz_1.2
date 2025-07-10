@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase';
+
 export const TEST_ACCOUNT = {
   email: 'test@minibizz.fr',
   password: 'MiniBizz2024!Test#Secure',
@@ -13,9 +15,64 @@ export const TEST_ACCOUNT = {
 };
 
 export const createTestAccount = async () => {
-  // Cette fonction peut être utilisée pour créer automatiquement un compte de test
-  console.log('Compte de test disponible:', TEST_ACCOUNT.email);
-  console.log('Mot de passe:', TEST_ACCOUNT.password);
+  try {
+    // Tentative de création du compte
+    const { data, error } = await supabase.auth.signUp({
+      email: TEST_ACCOUNT.email,
+      password: TEST_ACCOUNT.password,
+      options: {
+        data: {
+          nom: TEST_ACCOUNT.profile.nom,
+          prenom: TEST_ACCOUNT.profile.prenom,
+          entreprise: TEST_ACCOUNT.profile.entreprise,
+          telephone: TEST_ACCOUNT.profile.telephone,
+          siret: TEST_ACCOUNT.profile.siret,
+          activite_principale: TEST_ACCOUNT.profile.activite_principale,
+          forme_juridique: TEST_ACCOUNT.profile.forme_juridique
+        }
+      }
+    });
+
+    if (error) {
+      // Si l'utilisateur existe déjà, ce n'est pas une erreur critique
+      if (error.message.includes('already registered')) {
+        console.log('Le compte de test existe déjà');
+        return { success: true, message: 'Compte existant' };
+      }
+      throw error;
+    }
+
+    // Si le compte a été créé avec succès
+    if (data.user) {
+      console.log('Compte de test créé avec succès:', TEST_ACCOUNT.email);
+      
+      // Créer le profil utilisateur
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          email: TEST_ACCOUNT.email,
+          nom: TEST_ACCOUNT.profile.nom,
+          prenom: TEST_ACCOUNT.profile.prenom,
+          telephone: TEST_ACCOUNT.profile.telephone,
+          siret: TEST_ACCOUNT.profile.siret,
+          activite_principale: TEST_ACCOUNT.profile.activite_principale,
+          forme_juridique: TEST_ACCOUNT.profile.forme_juridique,
+          onboarding_completed: true
+        });
+
+      if (profileError) {
+        console.warn('Erreur lors de la création du profil:', profileError);
+      }
+
+      return { success: true, message: 'Compte créé' };
+    }
+
+    return { success: false, message: 'Erreur inconnue' };
+  } catch (error: any) {
+    console.error('Erreur lors de la création du compte de test:', error);
+    return { success: false, message: error.message };
+  }
 };
 
 export const getTestData = () => {
