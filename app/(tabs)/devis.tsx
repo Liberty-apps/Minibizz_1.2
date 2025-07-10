@@ -361,6 +361,7 @@ export default function Devis() {
         </View>
       </View>
     </View>
+    
     <FloatingActionButton />
   </View>
   );
