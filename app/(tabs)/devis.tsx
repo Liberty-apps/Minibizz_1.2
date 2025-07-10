@@ -143,6 +143,7 @@ export default function Devis() {
   }
 
   return (
+    <>
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -363,7 +364,7 @@ export default function Devis() {
     </View>
 
     <FloatingActionButton />
-    </View>
+    </>
   );
 }
 
