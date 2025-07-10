@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
-import { Calendar, Plus, Clock, User, MapPin, ChevronLeft, ChevronRight, Filter, CheckCircle, AlertCircle, XCircle, Phone, Video, UsersIcon } from 'lucide-react-native';
+import { Calendar, Plus, Clock, User, MapPin, ChevronLeft, ChevronRight, Filter, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Circle as XCircle, Phone, Video, Users as UsersIcon } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { planningService } from '../../src/services/database';
 

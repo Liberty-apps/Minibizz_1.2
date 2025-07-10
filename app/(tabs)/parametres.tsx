@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert, Platform, Linking } from 'react-native';
 import { router } from 'expo-router';
-import { Settings, User, Building, Bell, Shield, HelpCircle, ChevronRight, Save, LogOut, Edit3, Key, Smartphone, Globe, Mail, Crown, Calculator, FileText, Rocket, Bank, CreditCard } from 'lucide-react-native';
+import { Settings, User, Building, Bell, Shield, CircleHelp as HelpCircle, ChevronRight, Save, LogOut, CreditCard as Edit3, Key, Smartphone, Globe, Mail, Crown, Calculator, FileText, Rocket, Ban as Bank, CreditCard } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useSubscription } from '../../src/contexts/SubscriptionContext';
 import UserLogo from '../../components/UserLogo';
