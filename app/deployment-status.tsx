@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { CircleCheck as CheckCircle, Circle as XCircle, Clock, RefreshCw, ArrowLeft, ExternalLink } from 'lucide-react-native';
+import { CircleCheck as CheckCircle, Circle as XCircle, Clock, RefreshCw, ArrowLeft, ExternalLink, Save } from 'lucide-react-native';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useSubscription } from '../src/contexts/SubscriptionContext';
 
@@ -118,10 +118,17 @@ export default function DeploymentStatus() {
   if (!user || !hasAccess('dashboard')) {
     return (
       <View style={styles.authContainer}>
-        <XCircle size={64} color="#dc2626" />
+            <ExternalLink size={20} color="#ffffff" />
         <Text style={styles.authTitle}>Accès non autorisé</Text>
         <Text style={styles.authText}>
           Vous devez être connecté et avoir un abonnement approprié pour accéder à cette page.
+        
+        {status === 'success' && (
+          <TouchableOpacity style={styles.finalizeButton} onPress={() => router.replace('/(tabs)')}>
+            <Save size={20} color="#ffffff" />
+            <Text style={styles.primaryButtonText}>Finaliser</Text>
+          </TouchableOpacity>
+        )}
         </Text>
         <TouchableOpacity 
           style={styles.authButton}
@@ -464,6 +471,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#16a34a',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+  },
+  finalizeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2563eb',
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
