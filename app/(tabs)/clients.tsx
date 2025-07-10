@@ -22,43 +22,45 @@ export default function Clients() {
     setLoading(true);
     
     try {
-    // Données de démo
-    const demoClients = [
-      {
-        id: '1',
-        nom: 'Dupont',
-        prenom: 'Marie',
-        email: 'marie.dupont@example.com',
-        telephone: '06 12 34 56 78',
-        type_client: 'particulier',
-        ville: 'Paris'
-      },
-      {
-        id: '2',
-        nom: 'TechSolutions',
-        entreprise: 'TechSolutions SARL',
-        email: 'contact@techsolutions.fr',
-        telephone: '01 23 45 67 89',
-        type_client: 'entreprise',
-        ville: 'Lyon',
-        siret: '12345678901234'
-      },
-      {
-        id: '3',
-        nom: 'Martin',
-        prenom: 'Thomas',
-        email: 'thomas.martin@example.com',
-        telephone: '07 65 43 21 09',
-        type_client: 'particulier',
-        ville: 'Marseille'
-      }
-    ];
-    
-    setTimeout(() => {
-      setClientsList(demoClients);
-      setLoading(false);
-    }, 1000);
-    
+      // Données de démo
+      const demoClients = [
+        {
+          id: '1',
+          nom: 'Dupont',
+          prenom: 'Marie',
+          email: 'marie.dupont@example.com',
+          telephone: '06 12 34 56 78',
+          type_client: 'particulier',
+          ville: 'Paris'
+        },
+        {
+          id: '2',
+          nom: 'TechSolutions',
+          entreprise: 'TechSolutions SARL',
+          email: 'contact@techsolutions.fr',
+          telephone: '01 23 45 67 89',
+          type_client: 'entreprise',
+          ville: 'Lyon',
+          siret: '12345678901234'
+        },
+        {
+          id: '3',
+          nom: 'Martin',
+          prenom: 'Thomas',
+          email: 'thomas.martin@example.com',
+          telephone: '07 65 43 21 09',
+          type_client: 'particulier',
+          ville: 'Marseille'
+        }
+      ];
+      
+      setTimeout(() => {
+        setClientsList(demoClients);
+        setLoading(false);
+      }, 1000);
+    } catch (error) {
+      setError('Impossible de charger les clients');
+    }
     // En mode production, on utiliserait:
     // if (!user) return;
     // try {
