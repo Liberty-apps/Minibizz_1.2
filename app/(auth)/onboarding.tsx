@@ -76,6 +76,7 @@ export default function Onboarding() {
   const handleComplete = async () => {
     if (!user) {
       Alert.alert('Erreur', 'Utilisateur non connecté');
+      router.replace('/(auth)/login');
       return;
     }
     
@@ -104,6 +105,7 @@ export default function Onboarding() {
         .eq('id', user.id);
 
       if (error) {
+        console.error('Erreur lors de la mise à jour du profil:', error);
         throw error;
       }
       
@@ -111,10 +113,7 @@ export default function Onboarding() {
         'Configuration terminée !',
         'Votre profil a été configuré avec succès.',
         [
-          {
-            text: 'Commencer',
-            onPress: () => router.replace('/(tabs)')
-          }
+          { text: 'Commencer', onPress: () => router.replace('/(tabs)') }
         ]
       );
     } catch (error: any) {
@@ -128,7 +127,7 @@ export default function Onboarding() {
   const handleSkip = () => {
     Alert.alert(
       'Passer la configuration',
-      'Vous pourrez configurer votre profil plus tard dans les paramètres.',
+      'Vous pourrez compléter votre profil plus tard dans les paramètres.',
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -390,7 +389,7 @@ export default function Onboarding() {
               loading && styles.primaryButtonDisabled
             ]}
             onPress={handleNext}
-            disabled={!validateStep(currentStep) || loading}
+            disabled={loading}
           >
             <Text style={styles.primaryButtonText}>
               {currentStep === totalSteps ? (loading ? 'Finalisation...' : 'Terminer') : 'Suivant'}
