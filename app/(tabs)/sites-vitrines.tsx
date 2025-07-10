@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Image } from 'react-native';
 import { router } from 'expo-router';
 import { Globe, Plus, Eye, CreditCard as Edit3, Settings, Trash2, ExternalLink, Palette, LayoutGrid as Layout, Image as ImageIcon, Search, Crown } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { sitesService } from '../../src/services/sites';
 import { useSubscription } from '../../src/contexts/SubscriptionContext';
 
 export default function SitesVitrines() {
