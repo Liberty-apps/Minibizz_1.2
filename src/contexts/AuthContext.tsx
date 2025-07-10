@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Vérifier la session existante
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session ? 'Session found' : 'No session');
       if (session?.user) {
         loadUserProfile(session.user);
       }
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
+        
         if (session?.user) {
           await loadUserProfile(session.user);
         } else {
@@ -71,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserProfile = async (authUser: User) => {
     try {
+      console.log('Loading profile for user:', authUser.id);
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -80,6 +83,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error && error.code !== 'PGRST116') {
         console.error('Erreur lors du chargement du profil:', error);
       }
+      
+      console.log('Profile data:', profile);
 
       // Si aucun profil n'existe, créer un profil de base
       if (!profile) {
@@ -155,10 +160,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log('Attempting login for:', email);
       
       if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
         throw new Error('Configuration Supabase manquante. Veuillez vérifier vos variables d\'environnement.');
       }
+      
+      console.log('Supabase config:', {
+        url: process.env.EXPO_PUBLIC_SUPABASE_URL ? 'Set' : 'Not set',
+        key: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Not set'
+      });
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -178,6 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.user) {
+        console.log('Login successful for:', data.user.email);
         await loadUserProfile(data.user);
       }
     } catch (error: any) {

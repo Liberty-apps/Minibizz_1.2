@@ -1,13 +1,16 @@
 import { useEffect } from 'react';
 import { router } from 'expo-router';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { useAuth } from '../src/contexts/AuthContext';
 
 export default function Index() {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading) {
+    console.log('Auth state:', { user, loading });
+    
+    // Attendre un peu pour s'assurer que l'état d'authentification est stable
+    const timer = setTimeout(() => {
       if (user) {
         // Vérifier si l'onboarding est complété
         if (user.profile?.onboarding_completed === false) {
@@ -19,12 +22,15 @@ export default function Index() {
         // Rediriger vers la page de test au lieu de login direct
         router.replace('/(auth)/test-login');
       }
-    }
-  }, [user, loading]);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [user, loading, router]);
 
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#2563eb" />
+      <Text style={styles.loadingText}>Chargement de l'application...</Text>
     </View>
   );
 }
@@ -35,5 +41,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f0f9ff',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#2563eb',
   },
 });

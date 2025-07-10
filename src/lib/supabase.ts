@@ -1,32 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Vérification des variables d'environnement
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Variables d\'environnement Supabase:', {
-    url: supabaseUrl ? 'Définie' : 'Manquante',
-    key: supabaseAnonKey ? 'Définie' : 'Manquante'
-  });
-  throw new Error(
-    'Variables d\'environnement Supabase manquantes. Veuillez configurer EXPO_PUBLIC_SUPABASE_URL et EXPO_PUBLIC_SUPABASE_ANON_KEY dans votre fichier .env'
-  );
-}
+console.log('Supabase URL:', supabaseUrl ? 'Définie' : 'Manquante');
+console.log('Supabase Key:', supabaseAnonKey ? 'Définie' : 'Manquante');
 
-// Validation du format de l'URL
-if (!supabaseUrl.startsWith('https://') || !supabaseUrl.includes('.supabase.co')) {
-  throw new Error(
-    'Format d\'URL Supabase invalide. L\'URL doit être au format: https://your-project-ref.supabase.co'
-  );
-}
-
-// Validation de la clé API - vérification plus souple
-if (!supabaseAnonKey.startsWith('eyJ') || supabaseAnonKey.length < 50) {
-  console.warn(
-    'La clé API Supabase semble invalide. Vérifiez que vous utilisez la clé "anon/public" depuis votre tableau de bord Supabase.'
-  );
-}
+// Créer le client Supabase même si les variables ne sont pas définies
+// Cela permettra à l'application de démarrer, mais les opérations Supabase échoueront
+// jusqu'à ce que les variables soient correctement définies
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
