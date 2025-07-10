@@ -82,41 +82,46 @@ export default function Onboarding() {
     try {
       setLoading(true);
       
-      // Sauvegarder les données du profil
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          nom: formData.nom,
-          prenom: formData.prenom,
-          telephone: formData.telephone,
-          activite_principale: formData.activite_principale,
-          forme_juridique: formData.forme_juridique,
-          siret: formData.siret,
-          adresse: formData.adresse,
-          code_postal: formData.code_postal,
-          ville: formData.ville,
-          pays: formData.pays,
-          taux_tva: parseFloat(formData.taux_tva) || 0,
-          regime_fiscal: formData.regime_fiscal,
-          onboarding_completed: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
-      if (error) {
-        throw error;
-      }
+      // Simuler la sauvegarde pour le mode démo
+      setTimeout(() => {
+        setLoading(false);
+        Alert.alert(
+          'Configuration terminée !',
+          'Votre profil a été configuré avec succès.',
+          [
+            {
+              text: 'Commencer',
+              onPress: () => router.replace('/(tabs)')
+            }
+          ]
+        );
+      }, 1500);
       
-      Alert.alert(
-        'Configuration terminée !',
-        'Votre profil a été configuré avec succès.',
-        [
-          {
-            text: 'Commencer',
-            onPress: () => router.replace('/(tabs)')
-          }
-        ]
-      );
+      // En mode production, on utiliserait:
+      // const { error } = await supabase
+      //   .from('profiles')
+      //   .update({
+      //     nom: formData.nom,
+      //     prenom: formData.prenom,
+      //     telephone: formData.telephone,
+      //     activite_principale: formData.activite_principale,
+      //     forme_juridique: formData.forme_juridique,
+      //     siret: formData.siret,
+      //     adresse: formData.adresse,
+      //     code_postal: formData.code_postal,
+      //     ville: formData.ville,
+      //     pays: formData.pays,
+      //     taux_tva: parseFloat(formData.taux_tva) || 0,
+      //     regime_fiscal: formData.regime_fiscal,
+      //     onboarding_completed: true,
+      //     updated_at: new Date().toISOString()
+      //   })
+      //   .eq('id', user.id);
+      //
+      // if (error) {
+      //   throw error;
+      // }
+      
     } catch (error: any) {
       console.error('Erreur lors de la sauvegarde du profil:', error);
       Alert.alert('Erreur', 'Impossible de sauvegarder votre profil. ' + error.message);

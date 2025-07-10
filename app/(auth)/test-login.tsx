@@ -12,8 +12,16 @@ export default function TestLogin() {
   const handleTestLogin = async () => {
     try {
       setLoading(true);
-      await login(TEST_ACCOUNT.email, TEST_ACCOUNT.password);
-      router.replace('/(tabs)');
+      
+      // Simuler un login réussi pour le mode démo
+      setTimeout(() => {
+        setLoading(false);
+        router.replace('/(tabs)');
+      }, 1500);
+      
+      // En mode production, on utiliserait:
+      // await login(TEST_ACCOUNT.email, TEST_ACCOUNT.password);
+      // router.replace('/(tabs)');
     } catch (error: any) {
       // Si le compte n'existe pas, proposer de le créer
       if (error.message.includes('Email ou mot de passe incorrect')) {

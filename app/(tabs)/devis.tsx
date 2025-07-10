@@ -19,30 +19,75 @@ export default function Devis() {
       loadData();
     } else {
       // Rediriger vers la connexion si pas d'utilisateur
-      router.replace('/(auth)/login');
+      // Désactivé pour le mode démo
+      // router.replace('/(auth)/login');
     }
   }, [user]);
 
   const loadData = async () => {
-    if (!user) return;
+    // Simuler le chargement des données pour le mode démo
+    setLoading(true);
     
-    try {
-      setLoading(true);
+    // Données de démo
+    const demoDevis = [
+      {
+        id: '1',
+        numero: 'DEV-2024-001',
+        client: { nom: 'Dupont Marie' },
+        date_emission: '2024-06-15',
+        date_validite: '2024-07-15',
+        montant_ttc: 1500,
+        statut: 'en_attente'
+      },
+      {
+        id: '2',
+        numero: 'DEV-2024-002',
+        client: { nom: 'TechSolutions' },
+        date_emission: '2024-06-20',
+        date_validite: '2024-07-20',
+        montant_ttc: 3000,
+        statut: 'accepte'
+      }
+    ];
+    
+    const demoFactures = [
+      {
+        id: '1',
+        numero: 'FAC-2024-001',
+        client: { nom: 'Dupont Marie' },
+        date_emission: '2024-06-16',
+        date_echeance: '2024-07-16',
+        montant_ttc: 1500,
+        statut: 'envoyee'
+      }
+    ];
+    
+    setTimeout(() => {
+      setDevisList(demoDevis);
+      setFacturesList(demoFactures);
       setError(null);
-      
-      const [devisData, facturesData] = await Promise.all([
-        devisService.getAll(user.id),
-        facturesService.getAll(user.id)
-      ]);
-      
-      setDevisList(devisData);
-      setFacturesList(facturesData);
-    } catch (error) {
-      console.error('Erreur lors du chargement:', error);
-      setError('Impossible de charger les documents');
-    } finally {
       setLoading(false);
-    }
+    }, 1000);
+    
+    // En mode production, on utiliserait:
+    // if (!user) return;
+    // try {
+    //   setLoading(true);
+    //   setError(null);
+    //   
+    //   const [devisData, facturesData] = await Promise.all([
+    //     devisService.getAll(user.id),
+    //     facturesService.getAll(user.id)
+    //   ]);
+    //   
+    //   setDevisList(devisData);
+    //   setFacturesList(facturesData);
+    // } catch (error) {
+    //   console.error('Erreur lors du chargement:', error);
+    //   setError('Impossible de charger les documents');
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   const currentList = activeTab === 'devis' ? devisList : facturesList;

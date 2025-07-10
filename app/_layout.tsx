@@ -5,6 +5,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import { AuthProvider } from '../src/contexts/AuthContext';
+import { SubscriptionProvider } from '../src/contexts/SubscriptionContext';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -35,12 +37,14 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <AuthProvider>
+      <SubscriptionProvider>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
       </Stack>
       <StatusBar style="auto" />
-    </>
+      </SubscriptionProvider>
+    </AuthProvider>
   );
 }

@@ -30,18 +30,39 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [user]);
 
   const loadSubscription = async () => {
-    if (!user) return;
+    // Simuler le chargement de l'abonnement pour le mode démo
+    setIsLoading(true);
     
-    try {
-      setIsLoading(true);
-      const subscriptionData = await stripeService.getUserSubscription();
-      console.log("Loaded subscription data:", subscriptionData);
-      setSubscription(subscriptionData);
-    } catch (error) {
-      console.error('Erreur lors du chargement de l\'abonnement:', error);
-    } finally {
+    // Simuler un abonnement Freemium
+    const demoSubscription = {
+      customer_id: 'cus_demo',
+      subscription_id: null,
+      subscription_status: 'not_started',
+      price_id: null,
+      current_period_start: null,
+      current_period_end: null,
+      cancel_at_period_end: false,
+      payment_method_brand: null,
+      payment_method_last4: null
+    };
+    
+    setTimeout(() => {
+      setSubscription(demoSubscription);
       setIsLoading(false);
-    }
+    }, 1000);
+    
+    // En mode production, on utiliserait:
+    // if (!user) return;
+    // try {
+    //   setIsLoading(true);
+    //   const subscriptionData = await stripeService.getUserSubscription();
+    //   console.log("Loaded subscription data:", subscriptionData);
+    //   setSubscription(subscriptionData);
+    // } catch (error) {
+    //   console.error('Erreur lors du chargement de l\'abonnement:', error);
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const updatePlan = async (planName: string): Promise<void> => {

@@ -29,19 +29,52 @@ export default function Planning() {
   }, [user]);
 
   const loadEvents = async () => {
-    if (!user) return;
+    // Simuler le chargement des événements pour le mode démo
+    setLoading(true);
     
-    try {
-      setLoading(true);
+    // Données de démo
+    const demoEvents = [
+      {
+        id: '1',
+        titre: 'Rendez-vous client',
+        description: 'Présentation du devis pour le site web',
+        date_debut: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        date_fin: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(),
+        lieu: 'Bureau client - Paris',
+        type_evenement: 'rdv',
+        statut: 'planifie'
+      },
+      {
+        id: '2',
+        titre: 'Livraison projet',
+        description: 'Finalisation et livraison du projet TechSolutions',
+        date_debut: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        date_fin: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString(),
+        lieu: 'En ligne',
+        type_evenement: 'prestation',
+        statut: 'confirme'
+      }
+    ];
+    
+    setTimeout(() => {
+      setEvents(demoEvents);
       setError(null);
-      const data = await planningService.getAll(user.id);
-      setEvents(data);
-    } catch (error) {
-      console.error('Erreur lors du chargement du planning:', error);
-      setError('Impossible de charger le planning');
-    } finally {
       setLoading(false);
-    }
+    }, 1000);
+    
+    // En mode production, on utiliserait:
+    // if (!user) return;
+    // try {
+    //   setLoading(true);
+    //   setError(null);
+    //   const data = await planningService.getAll(user.id);
+    //   setEvents(data);
+    // } catch (error) {
+    //   console.error('Erreur lors du chargement du planning:', error);
+    //   setError('Impossible de charger le planning');
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];

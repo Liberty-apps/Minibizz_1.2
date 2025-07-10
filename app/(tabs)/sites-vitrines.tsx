@@ -48,37 +48,75 @@ export default function SitesVitrines() {
       loadData();
     } else {
       // Rediriger vers la connexion si pas d'utilisateur
-      router.replace('/(auth)/login');
+      // Désactivé pour le mode démo
+      // router.replace('/(auth)/login');
     }
   }, [user]);
 
   const loadData = async () => {
-    if (!user) return;
+    // Simuler le chargement des données pour le mode démo
+    setLoading(true);
     
-    try {
-      setLoading(true);
+    // Données de démo
+    const demoSites = [
+      {
+        id: '1',
+        nom: 'Mon Site Professionnel',
+        sous_domaine: 'monsite',
+        statut: 'publie',
+        created_at: '2024-06-15T10:30:00Z',
+        updated_at: '2024-06-16T14:20:00Z'
+      }
+    ];
+    
+    const demoTemplates = [
+      {
+        id: '1',
+        nom: 'Business',
+        description: 'Template professionnel pour entreprises',
+        type_template: 'vitrine'
+      },
+      {
+        id: '2',
+        nom: 'Portfolio',
+        description: 'Idéal pour présenter vos travaux',
+        type_template: 'portfolio'
+      },
+      {
+        id: '3',
+        nom: 'Boutique',
+        description: 'Template e-commerce avec catalogue',
+        type_template: 'boutique'
+      }
+    ];
+    
+    setTimeout(() => {
+      setSites(demoSites);
+      setTemplates(demoTemplates);
       setError(null);
-      
-      // Log the user ID for debugging
-      console.log('Loading sites for user ID:', user.id);
-      
-      const [sitesData, templatesData] = await Promise.all([
-        sitesService.getUserSites(user.id),
-        sitesService.getTemplates()
-      ]);
-      
-      console.log('Loaded sites:', sitesData.length);
-      console.log('Loaded templates:', templatesData.length);
-      
-      setSites(sitesData);
-      setTemplates(templatesData);
-    } catch (error: any) {
-      console.error('Erreur lors du chargement:', error);
-      setError(`Impossible de charger les sites: ${error.message}`);
-      Alert.alert('Erreur', 'Impossible de charger les sites');
-    } finally {
       setLoading(false);
-    }
+    }, 1000);
+    
+    // En mode production, on utiliserait:
+    // if (!user) return;
+    // try {
+    //   setLoading(true);
+    //   setError(null);
+    //   
+    //   const [sitesData, templatesData] = await Promise.all([
+    //     sitesService.getUserSites(user.id),
+    //     sitesService.getTemplates()
+    //   ]);
+    //   
+    //   setSites(sitesData);
+    //   setTemplates(templatesData);
+    // } catch (error: any) {
+    //   console.error('Erreur lors du chargement:', error);
+    //   setError(`Impossible de charger les sites: ${error.message}`);
+    //   Alert.alert('Erreur', 'Impossible de charger les sites');
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   const validateForm = () => {
