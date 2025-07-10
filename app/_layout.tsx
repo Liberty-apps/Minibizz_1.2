@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
+import { useFonts, Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { SubscriptionProvider } from '../src/contexts/SubscriptionContext';
@@ -15,13 +14,10 @@ export default function RootLayout() {
   useFrameworkReady();
   
   const [fontsLoaded, fontError] = useFonts({
-    'Inter-Regular': Inter_400Regular,
-    'Inter-Medium': Inter_500Medium,
-    'Inter-SemiBold': Inter_600SemiBold,
-    'Inter-Bold': Inter_700Bold,
     'Poppins-Regular': Poppins_400Regular,
     'Poppins-Medium': Poppins_500Medium,
     'Poppins-SemiBold': Poppins_600SemiBold,
+    'Poppins-Bold': Poppins_700Bold,
   });
 
   useEffect(() => {
@@ -39,11 +35,14 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <SubscriptionProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
-      </Stack>
-      <StatusBar style="auto" />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="restaurant/[id]" options={{ headerShown: false, presentation: 'modal' }} />
+          <Stack.Screen name="checkout" options={{ headerShown: false, presentation: 'modal' }} />
+          <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
+        </Stack>
+        <StatusBar style="dark" />
       </SubscriptionProvider>
     </AuthProvider>
   );
