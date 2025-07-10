@@ -68,16 +68,10 @@ export default function Register() {
     try {
       setError('');
       setLoading(true);
-      
-      // Simuler un enregistrement réussi pour le mode démo
-      setTimeout(() => {
-        setLoading(false);
-        router.replace('/(tabs)');
-      }, 1500);
-      
-      // En mode production, on utiliserait:
-      // await register(email.trim(), password);
-      // router.replace('/(tabs)');
+      console.log('Attempting to register with:', email);
+      await register(email.trim(), password);
+      console.log('Registration successful, navigating to dashboard');
+      router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Registration failed:', error);
       

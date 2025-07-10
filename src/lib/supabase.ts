@@ -1,18 +1,30 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Vérification des variables d'environnement
-// Utiliser des valeurs par défaut pour le développement
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-// Afficher un avertissement au lieu de bloquer l'application
-if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
+if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Variables d\'environnement Supabase:', {
-    url: process.env.EXPO_PUBLIC_SUPABASE_URL ? 'Définie' : 'Manquante',
-    key: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? 'Définie' : 'Manquante'
+    url: supabaseUrl ? 'Définie' : 'Manquante',
+    key: supabaseAnonKey ? 'Définie' : 'Manquante'
   });
-  console.warn(
+  throw new Error(
     'Variables d\'environnement Supabase manquantes. Veuillez configurer EXPO_PUBLIC_SUPABASE_URL et EXPO_PUBLIC_SUPABASE_ANON_KEY dans votre fichier .env'
+  );
+}
+
+// Validation du format de l'URL
+if (!supabaseUrl.startsWith('https://') || !supabaseUrl.includes('.supabase.co')) {
+  throw new Error(
+    'Format d\'URL Supabase invalide. L\'URL doit être au format: https://your-project-ref.supabase.co'
+  );
+}
+
+// Validation de la clé API - vérification plus souple
+if (!supabaseAnonKey.startsWith('eyJ') || supabaseAnonKey.length < 50) {
+  console.warn(
+    'La clé API Supabase semble invalide. Vérifiez que vous utilisez la clé "anon/public" depuis votre tableau de bord Supabase.'
   );
 }
 

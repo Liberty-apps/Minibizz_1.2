@@ -40,16 +40,8 @@ export default function Login() {
       setError('');
       setLoading(true);
 
-      
-      // Simuler un login réussi pour le mode démo
-      setTimeout(() => {
-        setLoading(false);
-        router.replace('/(tabs)');
-      }, 1500);
-      
-      // En mode production, on utiliserait:
-      // await login(email.trim(), password);
-      // router.replace('/(tabs)');
+      await login(email.trim(), password);
+      router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Login failed:', error);
       

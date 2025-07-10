@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { onboardingService } from '../services/onboarding';
-import type { User, Session } from '@supabase/supabase-js';
+import type { User } from '@supabase/supabase-js';
 
 interface AuthUser extends User {
   profile?: {
@@ -46,16 +46,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Vérifier la session existante
-    supabase.auth.getSession().then((response) => {
-      const session = response?.data?.session;
-      if (session && session.user) {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
         loadUserProfile(session.user);
       }
       setLoading(false);
     });
 
     // Écouter les changements d'authentification
-    const authListener = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
         if (session?.user) {
@@ -67,11 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    return () => {
-      if (authListener && authListener.data && authListener.data.subscription) {
-        authListener.data.subscription.unsubscribe();
-      }
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const loadUserProfile = async (authUser: User) => {

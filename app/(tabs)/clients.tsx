@@ -18,59 +18,19 @@ export default function Clients() {
   }, [user]);
 
   const loadClients = async () => {
-    // Simuler le chargement des clients pour le mode démo
-    setLoading(true);
+    if (!user) return;
     
     try {
-    // Données de démo
-    const demoClients = [
-      {
-        id: '1',
-        nom: 'Dupont',
-        prenom: 'Marie',
-        email: 'marie.dupont@example.com',
-        telephone: '06 12 34 56 78',
-        type_client: 'particulier',
-        ville: 'Paris'
-      },
-      {
-        id: '2',
-        nom: 'TechSolutions',
-        entreprise: 'TechSolutions SARL',
-        email: 'contact@techsolutions.fr',
-        telephone: '01 23 45 67 89',
-        type_client: 'entreprise',
-        ville: 'Lyon',
-        siret: '12345678901234'
-      },
-      {
-        id: '3',
-        nom: 'Martin',
-        prenom: 'Thomas',
-        email: 'thomas.martin@example.com',
-        telephone: '07 65 43 21 09',
-        type_client: 'particulier',
-        ville: 'Marseille'
-      }
-    ];
-    
-    setTimeout(() => {
-      setClientsList(demoClients);
+      setLoading(true);
+      setError(null);
+      const data = await clientsService.getAll(user.id);
+      setClientsList(data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des clients:', error);
+      setError('Impossible de charger les clients');
+    } finally {
       setLoading(false);
-    }, 1000);
-    
-    // En mode production, on utiliserait:
-    // if (!user) return;
-    // try {
-    //   setLoading(true);
-    //   const data = await clientsService.getAll(user.id);
-    //   setClientsList(data);
-    // } catch (error) {
-    //   console.error('Erreur lors du chargement des clients:', error);
-    //   setError('Impossible de charger les clients');
-    // } finally {
-    //   setLoading(false);
-    // }
+    }
   };
 
   const filteredClients = clientsList.filter(client => {

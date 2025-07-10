@@ -8,19 +8,16 @@ export default function Index() {
 
   useEffect(() => {
     if (!loading) {
-      if (user && user.profile) {
+      if (user) {
         // Vérifier si l'onboarding est complété
         if (user.profile?.onboarding_completed === false) {
           router.replace('/(auth)/onboarding');
         } else {
           router.replace('/(tabs)');
         }
-      } else if (!user) {
+      } else {
         // Rediriger vers la page de test au lieu de login direct
         router.replace('/(auth)/test-login');
-      } else {
-        // Si user existe mais pas de profil, rediriger vers l'onboarding
-        router.replace('/(auth)/onboarding');
       }
     }
   }, [user, loading]);
