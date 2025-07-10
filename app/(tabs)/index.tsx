@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { Bell, ChevronRight, TrendingUp, Calendar, Users, FileText, Plus, CreditCard } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
+import Logo from '../../components/Logo';
 import { dashboardService } from '../../src/services/database';
 import FloatingActionButton from '../../components/FloatingActionButton';
 import UserLogo from '../../components/UserLogo';
@@ -64,7 +65,7 @@ export default function HomeScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <UserLogo />
+          <Logo size="medium" showText={true} color="#2563eb" />
         </View>
         <TouchableOpacity style={styles.notificationButton}>
           <Bell size={24} color="#0f172a" />

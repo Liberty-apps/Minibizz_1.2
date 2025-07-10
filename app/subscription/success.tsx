@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import { router } from 'expo-router';
 import { CircleCheck as CheckCircle, ArrowRight, Chrome as Home } from 'lucide-react-native';
 import { stripeService } from '../../src/services/stripe';
+import Logo from '../../components/Logo';
 
 export default function SubscriptionSuccess() {
   const [loading, setLoading] = useState(true);
@@ -69,6 +70,9 @@ export default function SubscriptionSuccess() {
     <View style={styles.container}>
       <View style={styles.content}>
         {/* Success Icon */}
+        <Logo size="large" showText={true} color="#2563eb" style={styles.logo} />
+        <Logo size="medium" showText={true} color="#2563eb" style={styles.logo} />
+        <Logo size="large" showText={true} color="#2563eb" style={styles.logo} />
         <View style={styles.iconContainer}>
           <CheckCircle size={80} color="#16a34a" />
         </View>
@@ -168,6 +172,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+  },
+  logo: {
+    marginBottom: 24,
+    alignSelf: 'center',
   },
   loadingText: {
     fontSize: 18,

@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { TEST_ACCOUNT } from '../../src/utils/testAccount';
-import { TestTube, ArrowRight, User, Lock } from 'lucide-react-native';
+import { TEST_ACCOUNT, createTestAccount } from '../../src/utils/testAccount';
+import { TestTube, ArrowRight, User, Lock } from 'lucide-react-native'; 
+import Logo from '../../components/Logo';
 
 export default function TestLogin() {
   const [loading, setLoading] = useState(false);
@@ -82,7 +83,7 @@ export default function TestLogin() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <TestTube color="#ffffff" size={32} />
+            <Logo size="large" showText={false} color="#2563eb" />
           </View>
           <Text style={styles.title}>Mode Test</Text>
           <Text style={styles.subtitle}>

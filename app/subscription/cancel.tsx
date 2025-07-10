@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { Circle as XCircle, ArrowLeft, RefreshCw } from 'lucide-react-native';
+import Logo from '../../components/Logo';
 
 export default function SubscriptionCancel() {
   const handleGoBack = () => {
@@ -20,6 +21,7 @@ export default function SubscriptionCancel() {
     <View style={styles.container}>
       <View style={styles.content}>
         {/* Cancel Icon */}
+        <Logo size="large" showText={true} color="#2563eb" style={styles.logo} />
         <View style={styles.iconContainer}>
           <XCircle size={80} color="#dc2626" />
         </View>
@@ -90,7 +92,11 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   iconContainer: {
-    marginBottom: 24,
+    marginBottom: 16,
+  },
+  logo: {
+    marginBottom: 16,
+    alignSelf: 'center',
   },
   title: {
     fontSize: 28,

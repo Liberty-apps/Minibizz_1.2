@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { Building, User, MapPin, Phone, Mail, ArrowRight, CircleCheck as CheckCircle, FileText } from 'lucide-react-native';
+import { Building, User, MapPin, Phone, Mail, ArrowRight, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { supabase } from '../../src/lib/supabase';
+import Logo from '../../components/Logo';
 
 export default function Onboarding() {
   const { user } = useAuth();
@@ -348,7 +349,7 @@ export default function Onboarding() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <FileText color="#ffffff" size={24} />
+            <Logo size="medium" showText={false} color="#2563eb" />
           </View>
           <Text style={styles.title}>Configuration du profil</Text>
           <Text style={styles.subtitle}>

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform, Linking } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { FileText, Mail, Lock, CircleAlert as AlertCircle, Wifi, WifiOff, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, CircleAlert as AlertCircle, Wifi, WifiOff, Eye, EyeOff } from 'lucide-react-native';
+import Logo from '../../components/Logo';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -85,7 +86,7 @@ export default function Login() {
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <FileText color="#ffffff" size={32} />
+            <Logo size="large" showText={false} color="#2563eb" />
           </View>
           <Text style={styles.title}>MiniBizz</Text>
           <Text style={styles.subtitle}>

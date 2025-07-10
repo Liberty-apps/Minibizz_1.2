@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView
 import { router } from 'expo-router';
 import { CircleCheck as CheckCircle, Circle as XCircle, Clock, RefreshCw, ArrowLeft, ExternalLink, Save } from 'lucide-react-native';
 import { useAuth } from '../src/contexts/AuthContext';
+import Logo from '../components/Logo';
 import { useSubscription } from '../src/contexts/SubscriptionContext';
 
 export default function DeploymentStatus() {
@@ -118,7 +119,7 @@ export default function DeploymentStatus() {
   if (!user || !hasAccess('dashboard')) {
     return (
       <View style={styles.authContainer}>
-            <ExternalLink size={20} color="#ffffff" />
+        <Logo size="large" showText={true} color="#2563eb" />
         <Text style={styles.authTitle}>Accès non autorisé</Text>
         <Text style={styles.authText}>
           Vous devez être connecté et avoir un abonnement approprié pour accéder à cette page.
@@ -144,9 +145,9 @@ export default function DeploymentStatus() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-          <ArrowLeft size={24} color="#6b7280" />
+          <ArrowLeft size={20} color="#6b7280" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Statut du déploiement</Text>
+        <Logo size="small" showText={true} color="#2563eb" />
         <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
           <RefreshCw size={20} color="#2563eb" />
         </TouchableOpacity>

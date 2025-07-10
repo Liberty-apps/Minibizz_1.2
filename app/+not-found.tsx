@@ -1,12 +1,14 @@
 import { Link, Stack } from 'expo-router';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { Home, ArrowLeft } from 'lucide-react-native';
+import Logo from '../components/Logo';
 
 export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
       <View style={styles.container}>
+        <Logo size="large" showText={true} color="#2563eb" style={styles.logo} />
         <Text style={styles.title}>Page not found</Text>
         <Text style={styles.subtitle}>
           The page you're looking for doesn't exist or has been moved.
@@ -40,6 +42,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
     backgroundColor: '#f8fafc',
+  },
+  logo: {
+    marginBottom: 24,
   },
   title: {
     fontSize: 24,
