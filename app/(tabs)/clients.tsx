@@ -306,10 +306,10 @@ export default function Clients() {
           <Text style={styles.statNumber}>{clientsList.length}</Text>
           <Text style={styles.statLabel}>Total</Text>
         </View>
-      </View>
+        </View>
+
+      <FloatingActionButton />
     </View>
-    <FloatingActionButton />
-  </View>
   );
 }
 
