@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Image, RefreshCon
 import { Bell, ChevronRight, TrendingUp, Calendar, Users, FileText, Plus, CreditCard } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { dashboardService } from '../../src/services/database';
+import FloatingActionButton from '../../components/FloatingActionButton';
 import UserLogo from '../../components/UserLogo';
 
 export default function HomeScreen() {
@@ -234,6 +235,7 @@ export default function HomeScreen() {
           </Text>
         </View>
       </ScrollView>
+      <FloatingActionButton />
     </View>
   );
 }

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { Calendar, Plus, Clock, User, MapPin, ChevronLeft, ChevronRight, Filter, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Circle as XCircle, Phone, Video, Users as UsersIcon } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { planningService } from '../../src/services/database';
+import FloatingActionButton from '../../components/FloatingActionButton';
 
 export default function Planning() {
   const { user } = useAuth();
@@ -357,6 +358,8 @@ export default function Planning() {
         </View>
       </View>
     </View>
+    <FloatingActionButton />
+  </View>
   );
 }
 

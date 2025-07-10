@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { router } from 'expo-router';
 import { FileText, Plus, Search, Filter, Eye, CreditCard as Edit3, Download, Send, Calendar, Euro, Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
+import FloatingActionButton from '../../components/FloatingActionButton';
 import { devisService, facturesService } from '../../src/services/database';
 
 export default function Devis() {
@@ -360,6 +361,8 @@ export default function Devis() {
         </View>
       </View>
     </View>
+    <FloatingActionButton />
+  </View>
   );
 }
 

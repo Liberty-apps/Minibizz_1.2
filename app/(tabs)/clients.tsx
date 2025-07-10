@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { router } from 'expo-router';
 import { Users, Plus, Search, Mail, Phone, MapPin, Building, User, Filter, CircleAlert as AlertCircle, CreditCard as Edit3, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
+import FloatingActionButton from '../../components/FloatingActionButton';
 import { clientsService } from '../../src/services/database';
 
 export default function Clients() {
@@ -307,6 +308,8 @@ export default function Clients() {
         </View>
       </View>
     </View>
+    <FloatingActionButton />
+  </View>
   );
 }
 
