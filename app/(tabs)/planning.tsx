@@ -358,7 +358,6 @@ export default function Planning() {
         </View>
       </View>
     </View>
-    <FloatingActionButton />
   </View>
   );
 }
